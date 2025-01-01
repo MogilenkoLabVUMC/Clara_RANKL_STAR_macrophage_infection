@@ -18,7 +18,8 @@ process_rnaseq_data <- function(counts, sample_info, annotate = TRUE) {
     DGE$samples$timepoint <- factor(sample_info$Time)
     DGE$samples$treatment <- factor(sample_info$Treatment)
     DGE$samples$rankl <- factor(sample_info$RANKL)
-    DGE$samples$group <- factor(sample_info$Group)
+    # Create syntactically valid group names by adding 't' prefix to numbers
+    DGE$samples$group <- factor(gsub("^(\\d+)h", "t\\1h", sample_info$Group))
     
     # Filter low expressed genes
     keep <- filterByExpr(DGE)

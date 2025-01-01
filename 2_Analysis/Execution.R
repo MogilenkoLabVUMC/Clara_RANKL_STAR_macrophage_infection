@@ -28,14 +28,65 @@ DT::datatable(DGErankl$samples)
 design <- model.matrix(~ 0 + group, data = DGErankl$samples)
 ## Rename the columns to remove "group" prefix
 colnames(design) <- gsub("group", "", colnames(design))
+colnames(design) <- paste0("h", colnames(design))
 ## Set contrast matrix
+### My contrast Desing
 contrasts <- makeContrasts(
-    RANKL_effect_4h = (`4h_STm_100` - `4h_mock_100`) - (`4h_STm_0` - `4h_mock_0`),
-    RANKL_effect_24h = (`24h_STm_100` - `24h_mock_100`) - (`24h_STm_0` - `24h_mock_0`),
-    Time_RANKL_effect = ((`24h_STm_100` - `24h_mock_100`) - (`24h_STm_0` - `24h_mock_0`)) -
-        ((`4h_STm_100` - `4h_mock_100`) - (`4h_STm_0` - `4h_mock_0`)),
+    # RANKL effect in mock conditions at 4h
+    RANKL_effect_mock_4h = h4h_mock_100 - h4h_mock_0,
+    # RANKL effect in mock conditions at 24h
+    RANKL_effect_mock_24h = h24h_mock_100 - h24h_mock_0,
+    # RANKL effect in STm infection at 4h
+    RANKL_effect_STm_4h = h4h_STm_100 - h4h_STm_0,
+    # RANKL effect in STm infection at 24h
+    RANKL_effect_STm_24h = h24h_STm_100 - h24h_STm_0,
+    # Infection response without RANKL at 4h
+    STm_response_0RANKL_4h = h4h_STm_0 - h4h_mock_0,
+    # Infection response with RANKL at 4h
+    STm_response_100RANKL_4h = h4h_STm_100 - h4h_mock_100,
+    # Infection response without RANKL at 24h
+    STm_response_0RANKL_24h = h24h_STm_0 - h24h_mock_0,
+    # Infection response with RANKL at 24h
+    STm_response_100RANKL_24h = h24h_STm_100 - h24h_mock_100,
+    # RANKL effect on infection response at 4h
+    RANKL_effect_4h = (h4h_STm_100 - h4h_mock_100) - (h4h_STm_0 - h4h_mock_0),
+    # RANKL effect on infection response at 24h
+    RANKL_effect_24h = (h24h_STm_100 - h24h_mock_100) - (h24h_STm_0 - h24h_mock_0),
+    # RANKL time-dependent effect 
+    Time_RANKL_effect = ((h24h_STm_100 - h24h_mock_100) - (h24h_STm_0 - h24h_mock_0)) - ((h4h_STm_100 - h4h_mock_100) - (h4h_STm_0 - h4h_mock_0)),
+    # Desing matrix
     levels = design
 )
+### Denis contrast desing 
+contrasts.d <- makeContrasts(
+    # STm effect without RANKL at 4h
+    STm_4h_0 = h4h_STm_0 - h4h_mock_0,
+    # STm effect with RANKL at 4h
+    STm_4h_100 = h4h_STm_100 - h4h_mock_100,
+    # RANKL effect without infection at 4h
+    RANKL_4h_mock = h4h_mock_100 - h4h_mock_0,
+    # RANKL effect with infection at 4h
+    RANKL_4h_STm = h4h_STm_100 - h4h_STm_0,
+    # STm effect without RANKL at 24h
+    STm_24h_0 = h24h_STm_0 - h24h_mock_0,
+    # STm effect with RANKL at 24h
+    STm_24h_100 = h24h_STm_100 - h24h_mock_100,
+    # RANKL effect without infection at 24h
+    RANKL_24h_mock = h24h_mock_100 - h24h_mock_0,
+    # RANKL effect with infection at 24h
+    RANKL_24h_STm = h24h_STm_100 - h24h_STm_0,
+    # Time effect in mock without RANKL
+    Time_mock_0 = h24h_mock_0 - h4h_mock_0,
+    # Time effect in mock with RANKL
+    Time_mock_100 = h24h_mock_100 - h4h_mock_100,
+    # Time effect in STm without RANKL
+    Time_STm_0 = h24h_STm_0 - h4h_STm_0,
+    # Time effect in STm with RANKL
+    Time_STm_100 = h24h_STm_100 - h4h_STm_100,
+    # Desing matrix 
+    levels = design
+)
+
 
 # PCA
 create_pca_plot(DGErankl, title = "PCA Plot")
@@ -53,21 +104,37 @@ fit <- contrasts.fit(fit, contrasts)
 ## Compute Bayes moderated t-statistics and p-values
 fit <- eBayes(fit, robust = TRUE)
 ## Extract contrasts coefficients
-### Early infection
+### Infection response with RANKL at 4h
+DE_rankl_infection_4h <- topTable(fit,
+    coef = "STm_response_100RANKL_4h",
+    sort.by = "t",
+    adjust.method = "fdr",
+    n = Inf
+)
+
+# Infection response with RANKL at 24h
+DE_rankl_infection_24h <- topTable(fit,
+    coef = "STm_response_100RANKL_24h",
+    sort.by = "t",
+    adjust.method = "fdr",
+    n = Inf
+)
+
+### Early infection RANKL modulation
 DE_rankl_4h <- topTable(fit,
     coef = "RANKL_effect_4h",
     sort.by = "t",
     adjust.method = "fdr",
     n = Inf
 )
-### Late infection
+### Late infection RANKL modulation
 DE_rankl_24h <- topTable(fit,
     coef = "RANKL_effect_24h",
     sort.by = "t",
     adjust.method = "fdr",
     n = Inf
 )
-### Time-dependent RANKL effect
+### Time-dependent RANKL modulation of the infection effect
 DE_rankl_time <- topTable(fit,
     coef = "Time_RANKL_effect",
     sort.by = "t",

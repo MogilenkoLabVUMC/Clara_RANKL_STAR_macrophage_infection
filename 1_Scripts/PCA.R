@@ -12,7 +12,16 @@ create_pca_plot <- function(DGE_object, title = "PCA Plot") {
     PC1 = pca$x[, 1],
     PC2 = pca$x[, 2],
     condition = DGE_object$samples$group,
-    sample_names = colnames(logCPM)
+    sample_names = paste0(
+      # Time point
+      ifelse(grepl("4h", DGE_object$samples$group), "4h", "24h"),
+      "_",
+      # Cell type
+      ifelse(grepl("STm", DGE_object$samples$group), "STm", "mock"),
+      "_",
+      # RANKL concentration
+      ifelse(grepl("100", DGE_object$samples$group), "100", "0")
+    )
   )
 
   # Calculate variance percentages
@@ -35,13 +44,15 @@ create_pca_plot <- function(DGE_object, title = "PCA Plot") {
     labs(color = "Condition", shape = "Condition") +
     xlab(paste0("PC1: ", round(percentVar[1], 1), "% variance")) +
     ylab(paste0("PC2: ", round(percentVar[2], 1), "% variance")) +
+    scale_color_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#F0E442", 
+                             "#0072B2", "#D55E00", "#CC79A7", "#000000")) +
     ggtitle(title) +
     custom_minimal_theme_with_grid() +
     xlim(-x_max * limit_buffer, x_max * limit_buffer) +
     ylim(-y_max * limit_buffer, y_max * limit_buffer) +
-    theme(
+      theme(
       legend.position = "inside",
-      legend.position.inside = c(0.85, 0.9),
+      legend.position.inside = c(0.7, 0.9),
       legend.justification = c(0, 1),
       legend.box.background = element_rect(color = "black", fill = "white", linewidth = 0.5),
       legend.box.margin = margin(2, 2, 2, 2),
