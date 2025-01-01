@@ -1,6 +1,6 @@
-# Load libraries
+# Load libraries and functions
 source("1_Scripts/Load_libraries.R")
-source("1_Scripts/Prepare_data.R")
+source("1_Scripts/process_rnaseq_data.R")
 source("1_Scripts/PCA.R")
 source("1_Scripts/standard_volcano.R")
 source("1_Scripts/GSEA_dotplot.R")
@@ -8,47 +8,32 @@ source("1_Scripts/runGSEA.R")
 source("1_Scripts/runningSumGSEAplot.R")
 source("1_Scripts/combined_volcano.R")
 
-
-
 # Prepare data
+## Read count data
+counts <- read.delim("0_Data/STAR_Data/counts.txt", row.names = 1)
 
-## Read data
-DGErankl <- process_rnaseq_data(
-    "0_Data/Kallisto_Data/TPM_all_sleuthC.csv",
-    annotate = TRUE,
-    normalize = FALSE
-)
+## Read sample information
+sample_info <- read.delim("0_Data/STAR_Data/seq_reference.txt", row.names = 1)
+colnames(sample_info) <- c("Group", "Time", "Treatment", "RANKL")
+sample_info$Sample <- rownames(sample_info)
 
-# Extract timepoints
-timepoints <- gsub("(\\d+h).*", "\\1", colnames(DGErankl))
-# Extract M/S using
-infection <- gsub("\\d+h([MS]).*", "\\1", colnames(DGErankl))
-# Extract 0R/100R
-rankl <- gsub(".*?([0-9]+R).*", "\\1", colnames(DGErankl))
-
-# Pass subgroups to DGElist
-DGErankl$samples$timepoint <- factor(timepoints, levels = c("4h", "24h"))
-DGErankl$samples$infection <- factor(infection, levels = c("M", "S"))
-DGErankl$samples$rankl <- factor(rankl, levels = c("0R", "100R"))
-
+## Create DGEList object with sample information
+DGErankl <- process_rnaseq_data(counts, sample_info)
+# Display sample information
 DT::datatable(DGErankl$samples)
-
-str(DGErankl$samples)
 
 
 # Set design matrix
-## Create group combinations
-DGErankl$samples$group <- paste(infection, rankl, timepoints, sep = ".")
 ## Set combinatorial design
 design <- model.matrix(~ 0 + group, data = DGErankl$samples)
 ## Rename the columns to remove "group" prefix
 colnames(design) <- gsub("group", "", colnames(design))
 ## Set contrast matrix
 contrasts <- makeContrasts(
-    RANKL_effect_4h = (S.100R.4h - M.100R.4h) - (S.0R.4h - M.0R.4h),
-    RANKL_effect_24h = (S.100R.24h - M.100R.24h) - (S.0R.24h - M.0R.24h),
-    Time_RANKL_effect = ((S.100R.24h - M.100R.24h) - (S.0R.24h - M.0R.24h)) -
-        ((S.100R.4h - M.100R.4h) - (S.0R.4h - M.0R.4h)),
+    RANKL_effect_4h = (`4h_STm_100` - `4h_mock_100`) - (`4h_STm_0` - `4h_mock_0`),
+    RANKL_effect_24h = (`24h_STm_100` - `24h_mock_100`) - (`24h_STm_0` - `24h_mock_0`),
+    Time_RANKL_effect = ((`24h_STm_100` - `24h_mock_100`) - (`24h_STm_0` - `24h_mock_0`)) -
+        ((`4h_STm_100` - `4h_mock_100`) - (`4h_STm_0` - `4h_mock_0`)),
     levels = design
 )
 
