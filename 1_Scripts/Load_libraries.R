@@ -19,6 +19,8 @@ install_and_load <- function(package_name, from_bioc = FALSE) {
 packages <- list(
     list("ggplot2", FALSE),
     list("tidyverse", FALSE),
+    list("pheatmap", FALSE),
+    list("Cairo", FALSE),
     list("edgeR", TRUE),
     list("limma", TRUE),
     list("biomaRt", TRUE),
