@@ -160,7 +160,7 @@ plot_pathway_heatmap(pooled_gsea_results$scores$gobp, "GO Biological Processes",
 dev.off()
 
 pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/reactome_heatmap.pdf", 
-    width = 12, 
+    width = 18, 
     height = 8)
 plot_pathway_heatmap(pooled_gsea_results$scores$reactome, "REACTOME Pathways", annotation_col)
 dev.off()
