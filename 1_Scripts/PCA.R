@@ -12,26 +12,16 @@ create_pca_plot <- function(DGE_object, title = "PCA Plot") {
     PC1 = pca$x[, 1],
     PC2 = pca$x[, 2],
     condition = DGE_object$samples$group,
-    sample_names = paste0(
-      # Time point
-      ifelse(grepl("4h", DGE_object$samples$group), "4h", "24h"),
-      "_",
-      # Cell type
-      ifelse(grepl("STm", DGE_object$samples$group), "STm", "mock"),
-      "_",
-      # RANKL concentration
-      ifelse(grepl("100", DGE_object$samples$group), "100", "0")
-    )
+    sample_names = as.character(DGE_object$samples$group)  # Use group levels as labels
   )
 
   # Calculate variance percentages
   percentVar <- pca$sdev^2 / sum(pca$sdev^2) * 100
 
-
-  # Calculate axis limits with 10% buffer
+  # Calculate axis limits with buffer
   x_max <- max(abs(pca_data$PC1))
   y_max <- max(abs(pca_data$PC2))
-  limit_buffer <- 1.5 # 50% buffer
+  limit_buffer <- 1.5
 
   # Create and return the plot
   pca_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = condition)) +
@@ -50,7 +40,7 @@ create_pca_plot <- function(DGE_object, title = "PCA Plot") {
     custom_minimal_theme_with_grid() +
     xlim(-x_max * limit_buffer, x_max * limit_buffer) +
     ylim(-y_max * limit_buffer, y_max * limit_buffer) +
-      theme(
+    theme(
       legend.position = "inside",
       legend.position.inside = c(0.7, 0.9),
       legend.justification = c(0, 1),
@@ -60,10 +50,8 @@ create_pca_plot <- function(DGE_object, title = "PCA Plot") {
       plot.margin = margin(20, 20, 20, 20)
     )
 
-  # Save the plot
-  filename <- paste0("3_Results/imgs/PCA/", gsub(" ", "_", title), ".pdf")
   ggsave(
-    filename = filename,
+    filename = paste0("3_Results/imgs/PCA/", gsub(" ", "_", title), ".pdf"),
     plot = pca_plot,
     width = 7,
     height = 5,

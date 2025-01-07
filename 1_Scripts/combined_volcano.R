@@ -1,22 +1,21 @@
-# Add this new function to combine volcano plots
 create_combined_volcano_plots <- function(DE_rankl_4h, DE_rankl_24h, DE_rankl_time, 
-                                        p_cutoff = 0.05, fc_cutoff = 2.0) {
+                                        p_cutoff = 0.05, fc_cutoff = 2.0, max.overlaps = 20) {
     # Create all three plots but don't save them individually
     p1 <- create_volcano_plot(DE_rankl_4h,
         p_cutoff = p_cutoff, fc_cutoff = fc_cutoff,
-        x_breaks = 2, max.overlaps = 10, label_method = "sig",
+        x_breaks = 2, max.overlaps = max.overlaps, label_method = "sig",
         title = "4 hours"
     )
     
     p2 <- create_volcano_plot(DE_rankl_24h,
         p_cutoff = p_cutoff, fc_cutoff = fc_cutoff,
-        x_breaks = 2, max.overlaps = 8, label_method = "sig",
+        x_breaks = 2, max.overlaps = max.overlaps, label_method = "sig",
         title = "24 hours"
     )
     
     p3 <- create_volcano_plot(DE_rankl_time,
         p_cutoff = p_cutoff, fc_cutoff = fc_cutoff,
-        x_breaks = 2, max.overlaps = 10, label_method = "sig",
+        x_breaks = 2, max.overlaps = max.overlaps, label_method = "sig",
         title = "24h vs 4h"
     )
     
@@ -42,7 +41,7 @@ create_combined_volcano_plots <- function(DE_rankl_4h, DE_rankl_24h, DE_rankl_ti
     # Combine plots using patchwork
     combined_plot <- p1 + p2 + p3 + 
         patchwork::plot_layout(ncol = 3, guides = "collect")
-    
+
     # Save the combined plot
     ggsave(
         filename = "3_Results/imgs/volcano/combined_volcano_plots.pdf",
@@ -54,3 +53,4 @@ create_combined_volcano_plots <- function(DE_rankl_4h, DE_rankl_24h, DE_rankl_ti
     
     return(combined_plot)
 }
+

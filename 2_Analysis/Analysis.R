@@ -1,3 +1,7 @@
+##############################
+### 1. Prepare environment ###
+#############################
+
 # Load libraries and functions
 source("1_Scripts/Load_libraries.R")
 source("1_Scripts/process_rnaseq_data.R")
@@ -7,6 +11,11 @@ source("1_Scripts/GSEA_dotplot.R")
 source("1_Scripts/runGSEA.R")
 source("1_Scripts/runningSumGSEAplot.R")
 source("1_Scripts/combined_volcano.R")
+source("1_Scripts/runGSEA_pool.R")
+
+#####################
+### 2. Read data ###
+#####################
 
 # Prepare data
 ## Read count data
@@ -22,55 +31,42 @@ DGErankl <- process_rnaseq_data(counts, sample_info)
 # Display sample information
 DT::datatable(DGErankl$samples)
 
-
+DGErankl$samples$group
 # PCA
 create_pca_plot(DGErankl, title = "PCA Plot")
 
+
+#####################
+### 3. Pool GSEA ###
+#####################
 # Set design matrix
 ## Set combinatorial design
 design <- model.matrix(~ 0 + group, data = DGErankl$samples)
 ## Rename the columns to remove "group" prefix
 colnames(design) <- gsub("group", "", colnames(design))
-colnames(design) <- paste0("h", colnames(design))
 
 ## Set contrast matrix
-### Select contrast desing
-contrasts.m <- makeContrasts(
-    # RANKL effect on infection response at 4h
-    RANKL_effect_4h = (h4h_STm_100 - h4h_mock_100) - (h4h_STm_0 - h4h_mock_0),
-    # RANKL effect on infection response at 24h
-    RANKL_effect_24h = (h24h_STm_100 - h24h_mock_100) - (h24h_STm_0 - h24h_mock_0),
-    # RANKL time-dependent effect 
-    Time_RANKL_effect = ((h24h_STm_100 - h24h_mock_100) - (h24h_STm_0 - h24h_mock_0)) - ((h4h_STm_100 - h4h_mock_100) - (h4h_STm_0 - h4h_mock_0)),
-    # Desing matrix
-    levels = design
-)
-
 ### Pool contrast design
 contrasts.p <- makeContrasts(
     # STm effect without RANKL at 4h
-    STm_4h_0 = h4h_STm_0 - h4h_mock_0,
+    STm_4h_0 = t4h_STm_0 - t4h_mock_0,
     # STm effect with RANKL at 4h
-    STm_4h_100 = h4h_STm_100 - h4h_mock_100,
+    STm_4h_100 = t4h_STm_100 - t4h_mock_100,
     # RANKL effect without infection at 4h
-    RANKL_4h_mock = h4h_mock_100 - h4h_mock_0,
+    RANKL_4h_mock = t4h_mock_100 - t4h_mock_0,
     # RANKL effect with infection at 4h
-    RANKL_4h_STm = h4h_STm_100 - h4h_STm_0,
+    RANKL_4h_STm = t4h_STm_100 - t4h_STm_0,
     # STm effect without RANKL at 24h
-    STm_24h_0 = h24h_STm_0 - h24h_mock_0,
+    STm_24h_0 = t24h_STm_0 - t24h_mock_0,
     # STm effect with RANKL at 24h
-    STm_24h_100 = h24h_STm_100 - h24h_mock_100,
+    STm_24h_100 = t24h_STm_100 - t24h_mock_100,
     # RANKL effect without infection at 24h
-    RANKL_24h_mock = h24h_mock_100 - h24h_mock_0,
+    RANKL_24h_mock = t24h_mock_100 - t24h_mock_0,
     # RANKL effect with infection at 24h
-    RANKL_24h_STm = h24h_STm_100 - h24h_STm_0,
-    # Desing matrix 
+    RANKL_24h_STm = t24h_STm_100 - t24h_STm_0,
+    # Design
     levels = design
 )
-
-#################################
-#### Pooled contrast analsis ####
-#################################
 
 ## Fit the model
 fit <- edgeR::voomLmFit(
@@ -85,136 +81,47 @@ fit <- eBayes(fit, robust = TRUE)
 
 ##############
 #### GSEA ####
-# Run GSEA for all pool contrasts
-gsea_results <- list()
-contrasts_to_analyze <- colnames(contrasts.p)
+# Run pooled GSEA analysis
+pooled_gsea_results <- run_pooled_gsea(fit, contrasts.p, DGErankl)
 
-for(contrast in contrasts_to_analyze) {
-    # Get DE results for each contrast
-    de_results <- topTable(fit, coef = contrast, 
-    sort.by = "t", adjust.method = "fdr", n = Inf)
-    
-    # Clean up gene names and remove any empty entries
-    de_results <- de_results[rownames(de_results) != "", ]
-    
-    # Create ranked gene list
-    ranked_genes <- de_results$t
-    names(ranked_genes) <- rownames(de_results)
-    ranked_genes <- ranked_genes[!is.na(ranked_genes)]
-    
-    tryCatch({
-        # Run GSEA for each database
-        gsea_results[[contrast]][["hallmark"]] <- runGSEA(
-            de_results,
-            rank_metric = "t",
-            species = "Mus musculus",
-            category = "H",
-            padj_method = "fdr",
-            nperm = 100000,
-            pvalue_cutoff = 0.01
-        )
-        
-        gsea_results[[contrast]][["kegg"]] <- runGSEA(
-            de_results,
-            rank_metric = "t",
-            species = "Mus musculus",
-            category = "C2",
-            subcategory = "CP:KEGG",
-            padj_method = "fdr",
-            nperm = 100000,
-            pvalue_cutoff = 0.01
-        )
-        
-        gsea_results[[contrast]][["gobp"]] <- runGSEA(
-            de_results,
-            rank_metric = "t",
-            species = "Mus musculus",
-            category = "C5",
-            subcategory = "GO:BP",
-            padj_method = "fdr",
-            nperm = 100000,
-            pvalue_cutoff = 0.01
-        )
-    }, error = function(e) {
-        message(sprintf("Error in contrast %s: %s", contrast, e$message))
-    })
-}
 
-# Pool significant pathways
-get_significant_pathways <- function(gsea_results, q_cutoff = 0.01) {
-    significant_paths <- lapply(gsea_results, function(x) {
-        if(!is.null(x)) {
-            x$ID[x$p.adjust < q_cutoff]
+# Create ordered sample vector
+sample_order <- with(DGErankl$samples, {
+    # Create all combinations in desired order
+    rankl_levels <- c("0", "100")
+    treatment_levels <- c("mock", "STm")
+    time_levels <- c("4h", "24h")
+    
+    # Generate ordered vector
+    ordered_samples <- character()
+    for(r in rankl_levels) {
+        for(tr in treatment_levels) {
+            for(t in time_levels) {
+                ordered_samples <- c(ordered_samples, 
+                    rownames(DGErankl$samples)[DGErankl$samples$rankl == r & 
+                                             DGErankl$samples$treatment == tr & 
+                                             DGErankl$samples$timepoint == t])
+            }
         }
-    })
-    unique(unlist(significant_paths))
-}
-
-# Get pools for each database
-hallmark_pool <- get_significant_pathways(lapply(gsea_results, `[[`, "hallmark"))
-kegg_pool <- get_significant_pathways(lapply(gsea_results, `[[`, "kegg"))
-gobp_pool <- get_significant_pathways(lapply(gsea_results, `[[`, "gobp"))
-
-
-# Extract gene sets from GSEA results
-get_pathway_genes <- function(gsea_results) {
-    # Extract results data frame
-    results_df <- gsea_results@result
-    
-    # Get significant pathways
-    sig_results <- results_df[results_df$p.adjust < 0.01, ]
-    
-    # Create list of gene sets
-    pathway_genes <- strsplit(sig_results$core_enrichment, "/")
-    names(pathway_genes) <- sig_results$ID
-    
-    return(pathway_genes)
-}
-
-# Get pathway genes for each database
-hallmark_genes <- get_pathway_genes(gsea_results$Time_RANKL_effect$hallmark)
-kegg_genes <- get_pathway_genes(gsea_results$Time_RANKL_effect$kegg)
-gobp_genes <- get_pathway_genes(gsea_results$Time_RANKL_effect$gobp)
-
-# Calculate normalized expression scores
-norm_counts <- cpm(DGErankl, log = TRUE)
-
-calculate_pathway_scores <- function(expression_data, pathway_genes, method = "mean") {
-    scores <- matrix(NA, 
-                    nrow = ncol(expression_data),
-                    ncol = length(pathway_genes),
-                    dimnames = list(colnames(expression_data), 
-                                  names(pathway_genes)))
-    
-    for(pathway in names(pathway_genes)) {
-        genes <- pathway_genes[[pathway]]
-        # Get genes that are present in expression data
-        genes <- genes[genes %in% rownames(expression_data)]
-        pathway_exp <- expression_data[genes, ]
-        scores[, pathway] <- colMeans(pathway_exp, na.rm = TRUE)
     }
-    return(scores)
-}
+    ordered_samples
+})
 
-# calculate normalized expression scores for each pathway database
-hallmark_scores <- calculate_pathway_scores(norm_counts, hallmark_genes)
-kegg_scores <- calculate_pathway_scores(norm_counts, kegg_genes)
-gobp_scores <- calculate_pathway_scores(norm_counts, gobp_genes)
-
-
-# Modified heatmap function
+# Modified heatmap function with controlled column order
 plot_pathway_heatmap <- function(scores, title, annotation_col) {
-    pheatmap(t(scores),  # transpose the matrix
+    pheatmap(t(scores),  
              scale = "row",
              clustering_method = "complete",
              clustering_distance_rows = "correlation",
-             clustering_distance_cols = "correlation",
+             cluster_cols = FALSE,  # Disable column clustering
              show_rownames = TRUE,
              show_colnames = FALSE,
              annotation_col = annotation_col,
              annotation_colors = ann_colors,
              color = colorRampPalette(c("navy", "white", "red"))(50),
-             main = title)
+             main = title,
+             gaps_col = c(12, 24),  # Add visual separators between main groups
+             colnames = sample_order)  # Set column order
 }
 
 # Add sample annotations
@@ -233,34 +140,46 @@ ann_colors <- list(
     rankl = c("0" = "#9467bd", "100" = "#8c564b")
 )
 
-
-# Create heatmaps with annotations
-p1 <- plot_pathway_heatmap(hallmark_scores, "Hallmark Pathways", annotation_col)
-p2 <- plot_pathway_heatmap(kegg_scores, "KEGG Pathways", annotation_col)
-p3 <- plot_pathway_heatmap(gobp_scores, "GO Biological Processes", annotation_col)
-# Save the heatmaps
+# Create and save heatmaps
 pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/hallmark_heatmap.pdf", 
     width = 12, 
     height = 8)
-p1
+plot_pathway_heatmap(pooled_gsea_results$scores$hallmark, "Hallmark Pathways", annotation_col)
 dev.off()
 
 pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/kegg_heatmap.pdf", 
     width = 12, 
     height = 8)
-p2
+plot_pathway_heatmap(pooled_gsea_results$scores$kegg, "KEGG Pathways", annotation_col)
 dev.off()
 
 pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/gobp_heatmap.pdf", 
-    width = 16, 
-    height = 25)
-p3
+    width = 12, 
+    height = 8)
+plot_pathway_heatmap(pooled_gsea_results$scores$gobp, "GO Biological Processes", annotation_col)
 dev.off()
 
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/reactome_heatmap.pdf", 
+    width = 12, 
+    height = 8)
+plot_pathway_heatmap(pooled_gsea_results$scores$reactome, "REACTOME Pathways", annotation_col)
+dev.off()
 
-######################################
-#### Independent contrast analsis ####
-######################################
+###################################
+### 4. Specific-questions GSEA ###
+###################################
+
+### Select contrast desing
+contrasts.m <- makeContrasts(
+    # RANKL effect on infection response at 4h
+    RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0),
+    # RANKL effect on infection response at 24h
+    RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0),
+    # RANKL time-dependent effect
+    Time_RANKL_effect = ((t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)) - ((t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)),
+    # Design
+    levels = design
+)
 
 # Statistical estimation
 ## Fit the model
@@ -270,26 +189,10 @@ fit <- edgeR::voomLmFit(
     sample.weights = TRUE
 )
 ## Compute contrasts from the linear model fit
-fit <- contrasts.fit(fit, contrasts)
+fit <- contrasts.fit(fit, contrasts.m)
 ## Compute Bayes moderated t-statistics and p-values
 fit <- eBayes(fit, robust = TRUE)
 ## Extract contrasts coefficients
-### Infection response with RANKL at 4h
-DE_rankl_infection_4h <- topTable(fit,
-    coef = "STm_response_100RANKL_4h",
-    sort.by = "t",
-    adjust.method = "fdr",
-    n = Inf
-)
-
-# Infection response with RANKL at 24h
-DE_rankl_infection_24h <- topTable(fit,
-    coef = "STm_response_100RANKL_24h",
-    sort.by = "t",
-    adjust.method = "fdr",
-    n = Inf
-)
-
 ### Early infection RANKL modulation
 DE_rankl_4h <- topTable(fit,
     coef = "RANKL_effect_4h",
@@ -311,16 +214,15 @@ DE_rankl_time <- topTable(fit,
     adjust.method = "fdr",
     n = Inf
 )
+
 ### Save results
 write.csv(DE_rankl_4h, "3_Results/DE_tables/DE_rankl_4h.csv")
 write.csv(DE_rankl_24h, "3_Results/DE_tables/DE_rankl_24h.csv")
 write.csv(DE_rankl_time, "3_Results/DE_tables/DE_rankl_time.csv")
 
-
-
 # Volcano plots 
 ## Early infection
-create_volcano_plot(
+p1 <- create_volcano_plot(
   DE_rankl_4h,
   p_cutoff = 0.05,
   fc_cutoff = 2.0,
@@ -331,7 +233,7 @@ create_volcano_plot(
 )
 
 ## Late infection
-create_volcano_plot(
+p2 <- create_volcano_plot(
   DE_rankl_24h,
   p_cutoff = 0.05,
   fc_cutoff = 2.0,
@@ -342,7 +244,7 @@ create_volcano_plot(
 )
 
 ## Time-dependent RANKL effect
-create_volcano_plot(
+p3 <- create_volcano_plot(
   DE_rankl_time,
   p_cutoff = 0.05,
   fc_cutoff = 2.0,
@@ -353,12 +255,13 @@ create_volcano_plot(
 )
 
 ## Combined volcano 
-create_combined_volcano_plots(
+p4 <- create_combined_volcano_plots(
     DE_rankl_4h,
     DE_rankl_24h,
     DE_rankl_time,
     p_cutoff = 0.05,
-    fc_cutoff = 2.0
+    fc_cutoff = 2.0,
+    max.overlaps = 15
 )
 
 
@@ -383,6 +286,30 @@ gsea_hallmark_time <- runGSEA(
   rank_metric = "t",
   species = "Mus musculus",
   category = "H",
+  padj_method = "fdr",
+  nperm = 100000,
+  pvalue_cutoff = 0.05
+)
+
+### 3. GO:BP
+gsea_gobp_time <- runGSEA(
+  DE_rankl_time,
+  rank_metric = "t",
+  species = "Mus musculus",
+  category = "C5",
+  subcategory = "GO:BP",
+  padj_method = "fdr",
+  nperm = 100000,
+  pvalue_cutoff = 0.05
+)
+
+### 4. KEGG
+gsea_kegg_time <- runGSEA(
+  DE_rankl_time,
+  rank_metric = "t",
+  species = "Mus musculus",
+  category = "C2",
+  subcategory = "CP:KEGG",
   padj_method = "fdr",
   nperm = 100000,
   pvalue_cutoff = 0.05
@@ -430,3 +357,77 @@ runSumGSEAplot(
   gene_set_ids = 1:5,
   title = "HALLMARK running sum for top 5 pathways"
 )
+
+## 3. GO:BP
+GSEA_dotplot(
+  gsea_obj = gsea_gobp_time,
+  showCategory = 15,
+  font.size = 10,
+  title = "Top 15 KO enriched GOBP time-dependent gene sets",
+  sortBy = "GeneRatio",
+  filterBy = "NES",
+  q_cut = 0.05,
+  replace_ = TRUE,
+  capitalize_1 = FALSE,
+  capitalize_all = FALSE,
+  min.dotSize = 2
+)
+
+runSumGSEAplot(
+  gsea_gobp_time,
+  gene_set_ids = 1:5,
+  title = "GOBP running sum for top 5 pathways"
+)
+
+## 4. KEGG 
+GSEA_dotplot(
+  gsea_obj = gsea_kegg_time,
+  showCategory = 15,
+  font.size = 10,
+  title = "Top 15 KO enriched KEGG time-dependent gene sets",
+  sortBy = "GeneRatio",
+  filterBy = "NES",
+  q_cut = 0.05,
+  replace_ = TRUE,
+  capitalize_1 = FALSE,
+  capitalize_all = FALSE,
+  min.dotSize = 2
+)
+
+runSumGSEAplot(
+  gsea_kegg_time,
+  gene_set_ids = 1:5,
+  title = "KEGG running sum for top 5 pathways"
+)
+
+# Get pathway genes for each database
+hallmark_genes <- get_pathway_genes(gsea_hallmark_time)
+kegg_genes <- get_pathway_genes(gsea_kegg_time)
+gobp_genes <- get_pathway_genes(gsea_gobp_time)
+reactome_genes <- get_pathway_genes(gsea_reactome_time)
+
+# Calculate normalized expression scores
+norm_counts <- cpm(DGErankl, log = TRUE)
+
+# Calculate pathway scores
+hallmark_scores <- calculate_pathway_scores(norm_counts, hallmark_genes)
+kegg_scores <- calculate_pathway_scores(norm_counts, kegg_genes)
+gobp_scores <- calculate_pathway_scores(norm_counts, gobp_genes)
+reactome_scores <- calculate_pathway_scores(norm_counts, reactome_genes)
+
+# Create and save heatmaps
+pdf("3_Results/imgs/GSEA/Time_dependent/hallmark_heatmap.pdf", width = 12, height = 8)
+plot_pathway_heatmap(hallmark_scores, "Hallmark Pathways", annotation_col)
+dev.off()
+
+pdf("3_Results/imgs/GSEA/Time_dependent/kegg_heatmap.pdf", width = 12, height = 8)
+plot_pathway_heatmap(kegg_scores, "KEGG Pathways", annotation_col)
+dev.off()
+
+pdf("3_Results/imgs/GSEA/Time_dependent/gobp_heatmap.pdf", width = 12, height = 8)
+plot_pathway_heatmap(gobp_scores, "GO Biological Processes", annotation_col)
+dev.off()
+
+pdf("3_Results/imgs/GSEA/Time_dependent/reactome_heatmap.pdf", width = 20, height = 8)
+plot_pathway_heatmap(reactome_scores, "REACTOME Pathways", annotation_col)
+dev.off()

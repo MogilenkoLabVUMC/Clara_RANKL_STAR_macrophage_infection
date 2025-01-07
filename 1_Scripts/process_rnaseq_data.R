@@ -1,4 +1,7 @@
 process_rnaseq_data <- function(counts, sample_info, annotate = TRUE) {
+    # Clean data first
+    counts <- counts[rownames(counts) != "", ]
+    
     # Function to extract number from sample name
     extract_num <- function(x) {
         as.numeric(sub(".*\\.(\\d+)\\..*", "\\1", x))
@@ -18,7 +21,6 @@ process_rnaseq_data <- function(counts, sample_info, annotate = TRUE) {
     DGE$samples$timepoint <- factor(sample_info$Time)
     DGE$samples$treatment <- factor(sample_info$Treatment)
     DGE$samples$rankl <- factor(sample_info$RANKL)
-    # Create syntactically valid group names by adding 't' prefix to numbers
     DGE$samples$group <- factor(gsub("^(\\d+)h", "t\\1h", sample_info$Group))
     
     # Filter low expressed genes
@@ -28,7 +30,6 @@ process_rnaseq_data <- function(counts, sample_info, annotate = TRUE) {
     # Normalize library sizes
     DGE <- calcNormFactors(DGE, method = "TMM")
     
-    # Add gene annotations if requested
     if (annotate) {
         require(biomaRt)
         ensembl <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
@@ -41,14 +42,15 @@ process_rnaseq_data <- function(counts, sample_info, annotate = TRUE) {
             mart = ensembl
         )
         
-        # Keep only unique gene names
+        # Keep only unique gene names and handle empty mappings
         mapping_table <- annotations %>%
+            filter(external_gene_name != "") %>%
             distinct(external_gene_name, .keep_all = TRUE) %>%
             select(ensembl_gene_id, external_gene_name)
         
-        # Match and rename genes
+        # Match and rename genes, keeping original names if mapping fails
         matched_idx <- match(rownames(DGE), mapping_table$ensembl_gene_id)
-        rownames(DGE) <- ifelse(!is.na(matched_idx), 
+        rownames(DGE) <- ifelse(!is.na(matched_idx) & mapping_table$external_gene_name[matched_idx] != "", 
                                mapping_table$external_gene_name[matched_idx],
                                rownames(DGE))
     }
