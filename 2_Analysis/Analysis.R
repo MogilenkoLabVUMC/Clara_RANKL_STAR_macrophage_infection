@@ -456,8 +456,18 @@ db_configs <- list(
 
 # Function to run GSEA and create plots for one DE table
 run_gsea_analysis <- function(de_table, timepoint) {
+    # Define database-specific plot parameters
+    db_plot_params <- list(
+        HALLMARK = list(width = 10, height = 7, font.size = 10),
+        REACTOME = list(width = 20, height = 11, font.size = 8),
+        KEGG = list(width = 12, height = 8, font.size = 9),
+        GOBP = list(width = 13, height = 8, font.size = 9)
+    )
+    
     for (db_name in names(db_configs)) {
-        # Run GSEA using your existing function
+        # Get database-specific parameters
+        params <- db_plot_params[[db_name]]
+        
         gsea_result <- runGSEA(
             DE_results = de_table,
             rank_metric = "t",
@@ -468,12 +478,11 @@ run_gsea_analysis <- function(de_table, timepoint) {
             pvalue_cutoff = 0.05
         )
         
-        # Create positive NES plot
         GSEA_dotplot(
             gsea_result,
             filterBy = "NES_positive",
             sortBy = "GeneRatio",
-            font.size = 10,
+            font.size = params$font.size,
             showCategory = 15,
             q_cut = 0.05,
             replace_ = TRUE,
@@ -483,12 +492,11 @@ run_gsea_analysis <- function(de_table, timepoint) {
             title = paste0(timepoint, " ", db_name, " Upregulated")
         )
         
-        # Create negative NES plot
         GSEA_dotplot(
             gsea_result,
             filterBy = "NES_negative",
             sortBy = "GeneRatio",
-            font.size = 10,
+            font.size = params$font.size,
             showCategory = 15,
             q_cut = 0.05,
             replace_ = TRUE,
@@ -497,15 +505,15 @@ run_gsea_analysis <- function(de_table, timepoint) {
             min.dotSize = 2,
             title = paste0(timepoint, " ", db_name, " Downregulated")
         )
-
+        
         GSEA_barplot(
             gsea_result,
-            title = paste0(timepoint, " ", db_name, " NES")
+            title = paste0(timepoint, " ", db_name, " NES"),
+            width = params$width,
+            height = params$height
         )
     }
 }
-
-
 
 # Run analysis for both timepoints
 run_gsea_analysis(DE_rankl_4h, "4h")
