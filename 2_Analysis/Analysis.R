@@ -31,7 +31,6 @@ DGErankl <- process_rnaseq_data(counts, sample_info)
 # Display sample information
 DT::datatable(DGErankl$samples)
 
-DGErankl$samples$group
 # PCA
 create_pca_plot(DGErankl, title = "PCA Plot")
 
@@ -64,6 +63,18 @@ contrasts.p <- makeContrasts(
     RANKL_24h_mock = t24h_mock_100 - t24h_mock_0,
     # RANKL effect with infection at 24h
     RANKL_24h_STm = t24h_STm_100 - t24h_STm_0,
+    # Design
+    levels = design
+)
+
+### Select contrast desing
+contrasts.m <- makeContrasts(
+    # RANKL effect on infection response at 4h
+    RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0),
+    # RANKL effect on infection response at 24h
+    RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0),
+    # RANKL time-dependent effect
+    Time_RANKL_effect = ((t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)) - ((t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)),
     # Design
     levels = design
 )
@@ -431,3 +442,71 @@ dev.off()
 pdf("3_Results/imgs/GSEA/Time_dependent/reactome_heatmap.pdf", width = 20, height = 8)
 plot_pathway_heatmap(reactome_scores, "REACTOME Pathways", annotation_col)
 dev.off()
+
+
+## tease apart which pathways RANKL is downregulating (or upregulating) in STm infected cells? i.e. RANKL effect on infection, 4h or 24h individually  
+
+# Define databases to analyze
+db_configs <- list(
+    HALLMARK = list(category = "H", subcategory = NULL),
+    REACTOME = list(category = "C2", subcategory = "CP:REACTOME"),
+    KEGG = list(category = "C2", subcategory = "CP:KEGG"),
+    GOBP = list(category = "C5", subcategory = "GO:BP")
+)
+
+# Function to run GSEA and create plots for one DE table
+run_gsea_analysis <- function(de_table, timepoint) {
+    for (db_name in names(db_configs)) {
+        # Run GSEA using your existing function
+        gsea_result <- runGSEA(
+            DE_results = de_table,
+            rank_metric = "t",
+            category = db_configs[[db_name]]$category,
+            subcategory = db_configs[[db_name]]$subcategory,
+            padj_method = "fdr",
+            nperm = 100000,
+            pvalue_cutoff = 0.05
+        )
+        
+        # Create positive NES plot
+        GSEA_dotplot(
+            gsea_result,
+            filterBy = "NES_positive",
+            sortBy = "GeneRatio",
+            font.size = 10,
+            showCategory = 15,
+            q_cut = 0.05,
+            replace_ = TRUE,
+            capitalize_1 = FALSE,
+            capitalize_all = FALSE,
+            min.dotSize = 2,
+            title = paste0(timepoint, " ", db_name, " Upregulated")
+        )
+        
+        # Create negative NES plot
+        GSEA_dotplot(
+            gsea_result,
+            filterBy = "NES_negative",
+            sortBy = "GeneRatio",
+            font.size = 10,
+            showCategory = 15,
+            q_cut = 0.05,
+            replace_ = TRUE,
+            capitalize_1 = FALSE,
+            capitalize_all = FALSE,
+            min.dotSize = 2,
+            title = paste0(timepoint, " ", db_name, " Downregulated")
+        )
+
+        GSEA_barplot(
+            gsea_result,
+            title = paste0(timepoint, " ", db_name, " NES")
+        )
+    }
+}
+
+
+
+# Run analysis for both timepoints
+run_gsea_analysis(DE_rankl_4h, "4h")
+run_gsea_analysis(DE_rankl_24h, "24h")
