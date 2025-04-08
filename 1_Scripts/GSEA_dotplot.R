@@ -19,21 +19,23 @@ smart_wrap <- function(text, width = 40) {
     }
     return(text)
 }
-
 GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "GSEA Dotplot",
                          replace_ = TRUE, capitalize_1 = TRUE, capitalize_all = FALSE,
                          filterBy = "qvalue",
                          sortBy = "GeneRatio",
                          q_cut = 0.05,
-                         min.dotSize = 2) {
+                         min.dotSize = 2,
+                         output_dir = "3_Results/imgs/GSEA/",
+                         save_plot = TRUE,
+                         width = 10,
+                         height = 7,
+                         dpi = 300) {
     # Extract the result data frame from the GSEA object
     gsea_data <- as.data.frame(gsea_obj@result)
-
     # Calculate the gene count from 'core_enrichment' by counting '/' and adding 1 (number of genes)
     gene_count <- gsea_data %>%
         group_by(ID) %>%
         summarise(count = sum(str_count(core_enrichment, "/")) + 1)
-
     # Merge gene counts with the original GSEA result and calculate GeneRatio
     gsea_data <- left_join(gsea_data, gene_count, by = "ID") %>%
         mutate(GeneRatio = count / setSize)
@@ -43,12 +45,10 @@ GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "G
         gsea_data$Description <- gsea_data$Description %>%
             str_replace_all("_", " ") # Replace "_" with " " if 'replace' is TRUE
     }
-
     if (capitalize_1) {
         gsea_data$Description <- gsea_data$Description %>%
             str_to_sentence() # Capitalize only the first word if 'capitalize_1' is TRUE
     }
-
     if (capitalize_all) {
         gsea_data$Description <- gsea_data$Description %>%
             str_to_title() # Capitalize all words if 'capitalize_all' is TRUE
@@ -57,8 +57,7 @@ GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "G
     # Add after the capitalize transformations
     gsea_data$Description <- sapply(gsea_data$Description, smart_wrap)
 
-
-    # Filter for significant pathways (qvalue < 0.01)
+    # Filter for significant pathways
     gsea_data_filtered <- gsea_data %>%
         filter(qvalue < q_cut) %>%
         mutate(NES_sign = ifelse(NES > 0, "Positive NES", "Negative NES"))
@@ -109,7 +108,6 @@ GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "G
     p <- ggplot(gsea_data_filtered, aes(x = GeneRatio, y = reorder(Description, !!sym(sortBy)))) +
         geom_point(aes(size = -log10(qvalue), color = NES_sign)) +
         scale_color_manual(values = c("Positive NES" = "orange", "Negative NES" = "skyblue")) +
-
         # Use scale_size_continuous to set visual size limits for the dots
         scale_size_continuous(
             range = c(min.dotSize, 10),
@@ -136,15 +134,24 @@ GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "G
             legend.position = "right"
         )
 
-    # Save the plot
-    filename <- paste0("3_Results/imgs/GSEA/", gsub(" ", "_", title), ".pdf")
-    ggsave(
-        filename = filename,
-        plot = p,
-        width = 10,
-        height = 7,
-        dpi = 300
-    )
+    # Save the plot if save_plot is TRUE
+    if (save_plot) {
+        # Create directory if it doesn't exist
+        if (!dir.exists(output_dir)) {
+            dir.create(output_dir, recursive = TRUE)
+        }
+        
+        # Create filename from title
+        filename <- file.path(output_dir, paste0(gsub(" ", "_", title), ".pdf"))
+        
+        ggsave(
+            filename = filename,
+            plot = p,
+            width = width,
+            height = height,
+            dpi = dpi
+        )
+    }
 
     return(p)
 }

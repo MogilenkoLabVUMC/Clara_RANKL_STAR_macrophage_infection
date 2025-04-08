@@ -95,27 +95,27 @@ fit <- eBayes(fit, robust = TRUE)
 # Run pooled GSEA analysis
 pooled_gsea_results <- run_pooled_gsea(fit, contrasts.p, DGErankl)
 
-
-# Create ordered sample vector
 sample_order <- with(DGErankl$samples, {
-    # Create all combinations in desired order
-    rankl_levels <- c("0", "100")
-    treatment_levels <- c("mock", "STm")
-    time_levels <- c("4h", "24h")
-    
-    # Generate ordered vector
-    ordered_samples <- character()
-    for(r in rankl_levels) {
-        for(tr in treatment_levels) {
-            for(t in time_levels) {
-                ordered_samples <- c(ordered_samples, 
-                    rownames(DGErankl$samples)[DGErankl$samples$rankl == r & 
-                                             DGErankl$samples$treatment == tr & 
-                                             DGErankl$samples$timepoint == t])
-            }
-        }
+  # We see 'rankl' is numeric: 0 or 100
+  # 'treatment' is "mock" or "STm"
+  # 'timepoint' is numeric: 4 or 24
+
+  rankl_levels <- c(0, 100)
+  treatment_levels <- c("mock", "STm")
+  time_levels <- c(4, 24)
+
+  ordered_samples <- character()
+  for(r in rankl_levels) {
+    for(tr in treatment_levels) {
+      for(t in time_levels) {
+        # Create a logical index to find rows that match r, tr, t
+        idx <- (rankl == r & treatment == tr & timepoint == t)
+        these_cells <- rownames(DGErankl$samples)[idx]
+        ordered_samples <- c(ordered_samples, these_cells)
+      }
     }
-    ordered_samples
+  }
+  ordered_samples
 })
 
 # Modified heatmap function with controlled column order
@@ -135,6 +135,9 @@ plot_pathway_heatmap <- function(scores, title, annotation_col) {
              colnames = sample_order)  # Set column order
 }
 
+# Calculate normalized expression scores
+norm_counts <- cpm(DGErankl, log = TRUE)
+
 # Add sample annotations
 annotation_col <- data.frame(
     Time = DGErankl$samples$timepoint,
@@ -152,25 +155,25 @@ ann_colors <- list(
 )
 
 # Create and save heatmaps
-pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/hallmark_heatmap.pdf", 
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/A.Pair-wise comparisons/hallmark_heatmap.pdf", 
     width = 12, 
     height = 8)
 plot_pathway_heatmap(pooled_gsea_results$scores$hallmark, "Hallmark Pathways", annotation_col)
 dev.off()
 
-pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/kegg_heatmap.pdf", 
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/A.Pair-wise comparisons/kegg_heatmap.pdf", 
     width = 12, 
     height = 8)
 plot_pathway_heatmap(pooled_gsea_results$scores$kegg, "KEGG Pathways", annotation_col)
 dev.off()
 
-pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/gobp_heatmap.pdf", 
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/A.Pair-wise comparisons/gobp_heatmap.pdf", 
     width = 12, 
     height = 8)
 plot_pathway_heatmap(pooled_gsea_results$scores$gobp, "GO Biological Processes", annotation_col)
 dev.off()
 
-pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/Pooled/reactome_heatmap.pdf", 
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/A.Pair-wise comparisons/reactome_heatmap.pdf", 
     width = 18, 
     height = 8)
 plot_pathway_heatmap(pooled_gsea_results$scores$reactome, "REACTOME Pathways", annotation_col)
@@ -339,7 +342,8 @@ GSEA_dotplot(
   replace_ = TRUE,
   capitalize_1 = FALSE,
   capitalize_all = FALSE,
-  min.dotSize = 2
+  min.dotSize = 2,
+  output_dir = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/"
 )
 
 runSumGSEAplot(
@@ -360,7 +364,8 @@ GSEA_dotplot(
   replace_ = TRUE,
   capitalize_1 = FALSE,
   capitalize_all = FALSE,
-  min.dotSize = 2
+  min.dotSize = 2,
+  output_dir = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/"
 )
 
 runSumGSEAplot(
@@ -381,7 +386,8 @@ GSEA_dotplot(
   replace_ = TRUE,
   capitalize_1 = FALSE,
   capitalize_all = FALSE,
-  min.dotSize = 2
+  min.dotSize = 2,
+  output_dir = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/"
 )
 
 runSumGSEAplot(
@@ -402,7 +408,8 @@ GSEA_dotplot(
   replace_ = TRUE,
   capitalize_1 = FALSE,
   capitalize_all = FALSE,
-  min.dotSize = 2
+  min.dotSize = 2,
+  output_dir = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/"
 )
 
 runSumGSEAplot(
@@ -417,9 +424,6 @@ kegg_genes <- get_pathway_genes(gsea_kegg_time)
 gobp_genes <- get_pathway_genes(gsea_gobp_time)
 reactome_genes <- get_pathway_genes(gsea_reactome_time)
 
-# Calculate normalized expression scores
-norm_counts <- cpm(DGErankl, log = TRUE)
-
 # Calculate pathway scores
 hallmark_scores <- calculate_pathway_scores(norm_counts, hallmark_genes)
 kegg_scores <- calculate_pathway_scores(norm_counts, kegg_genes)
@@ -427,19 +431,19 @@ gobp_scores <- calculate_pathway_scores(norm_counts, gobp_genes)
 reactome_scores <- calculate_pathway_scores(norm_counts, reactome_genes)
 
 # Create and save heatmaps
-pdf("3_Results/imgs/GSEA/Time_dependent/hallmark_heatmap.pdf", width = 12, height = 8)
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/hallmark_heatmap.pdf", width = 12, height = 8)
 plot_pathway_heatmap(hallmark_scores, "Hallmark Pathways", annotation_col)
 dev.off()
 
-pdf("3_Results/imgs/GSEA/Time_dependent/kegg_heatmap.pdf", width = 12, height = 8)
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/kegg_heatmap.pdf", width = 12, height = 8)
 plot_pathway_heatmap(kegg_scores, "KEGG Pathways", annotation_col)
 dev.off()
 
-pdf("3_Results/imgs/GSEA/Time_dependent/gobp_heatmap.pdf", width = 12, height = 8)
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/gobp_heatmap.pdf", width = 12, height = 8)
 plot_pathway_heatmap(gobp_scores, "GO Biological Processes", annotation_col)
 dev.off()
 
-pdf("3_Results/imgs/GSEA/Time_dependent/reactome_heatmap.pdf", width = 20, height = 8)
+pdf("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/B.Granular_questions/reactome_heatmap.pdf", width = 20, height = 8)
 plot_pathway_heatmap(reactome_scores, "REACTOME Pathways", annotation_col)
 dev.off()
 

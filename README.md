@@ -1,7 +1,10 @@
-# RANKL singaling in macrophages
+# RANKL Signaling in Macrophages
 
-## Experiment structure:
-The samples are all macrophages that received no RANKL (0) or RANKL (100) for 2 days prior to mock infection or Salmonella infection (STm). They were either infected for 4h or 24h before samples were harvested. 
+This repository contains the bulk RNA-seq analysis pipeline used to explore the effects of **RANKL signaling** on the **innate immune response** of macrophages to *Salmonella* infection. The analysis is performed in **R**, with a focus on both **differential expression** and **gene set enrichment analysis (GSEA)** to uncover pathway-level responses.
+
+## 🧪 Experimental Design
+
+All samples are murine macrophages treated with either **no RANKL (0)** or **100 ng/mL RANKL** for 48 hours prior to mock infection or *Salmonella Typhimurium* (STm) infection. Cells were harvested at either **4 hours** or **24 hours** post-infection. Each condition was run in **triplicate**.
 
 ```mermaid
 graph TD
@@ -21,40 +24,64 @@ graph TD
     F --> M[24h Harvest]
     G --> N[4h Harvest]
     G --> O[24h Harvest]
-
-    %% Labels for conditions
-    B ---|0| D
-    B ---|0| E
-    C ---|100| F
-    C ---|100| G
 ```
 
-So there were total 8 experimental conditions. 
+### 📊 Experimental Conditions (n = 8 groups, 3 replicates each)
 
-* 4h_mock_0 
-* 24h_mock_0
-* 4h_STm_0
-* 24h_STm_0
-* 4h_mock_100
-* 24h_mock_100
-* 4h_STm_100
-* 24h_STm_100
-An each condition had 3 technical replicates
+- `4h_mock_0`  
+- `24h_mock_0`  
+- `4h_STm_0`  
+- `24h_STm_0`  
+- `4h_mock_100`  
+- `24h_mock_100`  
+- `4h_STm_100`  
+- `24h_STm_100`  
 
-## Preprocessing 
-Preprocessing was done before by a PhD student using Kallisto / Sleuth-normalization. We are considering rerunning the pipeline with STAR. 
+---
 
 
-## Main interest:
-The main interest is how RANKL impacts the innate immune response to infection. Biologically, I have seen decreases in TLR and NFkB pathways, and associated decreases in proinflammatory cytokines.
+## 🧬 Biological Objective
 
+The main question is: **How does RANKL modulate the macrophage response to infection?**
+
+Previous biological findings suggest RANKL **dampens pro-inflammatory signaling** (e.g., TLR/NF-κB pathways). This pipeline quantifies those effects at the transcriptional and pathway level, across timepoints.
+
+---
+
+## 🧠 Statistical Design & Contrasts
+
+We define **specific contrasts** to isolate the biological effects of interest:
 ## Statistical Modelling 
 To model the experiment in mathematical terms, I`m going to set the following contrasts: 
+
+#### 🧮 Defining Contrasts
+
+```r
+contrasts.p <- makeContrasts(
+    STm_4h_0 = t4h_STm_0 - t4h_mock_0,
+    STm_4h_100 = t4h_STm_100 - t4h_mock_100,
+    RANKL_4h_mock = t4h_mock_100 - t4h_mock_0,
+    RANKL_4h_STm = t4h_STm_100 - t4h_STm_0,
+    STm_24h_0 = t24h_STm_0 - t24h_mock_0,
+    STm_24h_100 = t24h_STm_100 - t24h_mock_100,
+    RANKL_24h_mock = t24h_mock_100 - t24h_mock_0,
+    RANKL_24h_STm = t24h_STm_100 - t24h_STm_0,
+    levels = design
+)
 ```
-RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0),
-RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0),
-Time_RANKL_effect = ((t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)) - ((t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)),
+These contrasts look at **baseline** RANKL and infection effects for each timepoint.
+
+```r
+contrasts.m <- makeContrasts(
+    RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0),
+    RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0),
+    Time_RANKL_effect = ((t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)) -
+                        ((t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)),
+    levels = design
+)
 ```
+These **granular contrasts** isolate how **RANKL** modulates infection specifically at 4h and 24h, and how that change evolves over time.
+
 Basically speaking, the `-` sign sets the comparison between two conditions. This helps us to isolate specific biological effects we`re interested in. 
 
 ### Early infection RANKL effect 
@@ -89,3 +116,143 @@ Uses the same mathematical logic, just with 24h samples
 * Negative values indicate genes where RANKL's effect on infection response is stronger at 4h
 
 
+
+---
+
+## 🧰 Pipeline Overview
+
+### 1. **Environment Setup**
+Scripts are modularized under `1_Scripts/`:
+- `Load_libraries.R`: Loads required packages
+- `process_rnaseq_data.R`: Creates `DGEList` and normalizes counts
+- `PCA.R`: Generates PCA plots
+- GSEA and visualization tools: `runGSEA.R`, `GSEA_dotplot.R`, `runningSumGSEAplot.R`, `combined_volcano.R`, etc.
+
+---
+
+### 2. **Data Preparation**
+- Reads **count matrix** and **sample metadata**
+- Constructs a `DGEList` for downstream analysis
+- Runs **PCA** to assess sample clustering
+
+---
+
+### 3. **Pooled GSEA Analysis**
+
+#### 🧮 Defining Contrasts
+```r
+### Pool contrast design
+contrasts.p <- makeContrasts(
+    # STm effect without RANKL at 4h
+    STm_4h_0 = t4h_STm_0 - t4h_mock_0,
+    # STm effect with RANKL at 4h
+    STm_4h_100 = t4h_STm_100 - t4h_mock_100,
+    # RANKL effect without infection at 4h
+    RANKL_4h_mock = t4h_mock_100 - t4h_mock_0,
+    # RANKL effect with infection at 4h
+    RANKL_4h_STm = t4h_STm_100 - t4h_STm_0,
+    # STm effect without RANKL at 24h
+    STm_24h_0 = t24h_STm_0 - t24h_mock_0,
+    # STm effect with RANKL at 24h
+    STm_24h_100 = t24h_STm_100 - t24h_mock_100,
+    # RANKL effect without infection at 24h
+    RANKL_24h_mock = t24h_mock_100 - t24h_mock_0,
+    # RANKL effect with infection at 24h
+    RANKL_24h_STm = t24h_STm_100 - t24h_STm_0,
+    # Design
+    levels = design
+)
+
+# Granular contrasts
+contrasts.m <- makeContrasts(
+    RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0),
+    RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0),
+    Time_RANKL_effect = ((t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)) - ((t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)),
+    levels = design
+)
+```
+### 📈 Running Pooled GSEA
+
+```r
+pooled_gsea_results <- run_pooled_gsea(fit, contrasts.p, DGErankl)
+```
+
+**What does `run_pooled_gsea()` do?**  
+- Iterates over each contrast (e.g., `RANKL_effect_4h`, `RANKL_effect_24h`), then:
+  1. **Extracts differentially expressed genes** using `topTable()`.
+  2. **Runs GSEA** on the ranked gene list (t-statistic) via `runGSEA()` using MSigDB references (Hallmark, KEGG, GO:BP, Reactome).
+  3. Collects significant pathways from each contrast and **merges** them into a pooled set.
+  4. Retrieves the corresponding **core genes** for these pathways using `get_pathway_genes_all()`.
+  5. **Normalizes** counts (`norm_counts`) and **calculates pathway scores** by averaging gene expression for each pathway.
+
+**Key outputs**:
+- **`gsea_results`**: Full GSEA results (by contrast and database).
+- **`pools`**: List of significantly enriched pathways across all contrasts.
+- **`genes`**: Genes in each enriched pathway, per database.
+- **`scores`**: Sample-by-pathway score matrix for heatmaps.
+
+**Goal**:  
+Perform GSEA across multiple contrasts and **aggregate** significant pathways and genes.
+
+**Function chain**:  
+1. `topTable()` → pulls DE genes per contrast  
+2. `runGSEA()` → runs enrichment with `clusterProfiler` & MSigDB  
+3. `get_significant_pathways()` → extracts top pathways across contrasts  
+4. `get_pathway_genes_all()` → collects core genes for top pathways  
+5. `calculate_pathway_scores()` → computes average expression per pathway
+
+---
+
+### 🧠 Supporting Functions Breakdown
+
+- **`run_pooled_gsea()`**  
+  - Loops over contrasts → runs GSEA → retrieves genes → computes scores  
+  - Returns GSEA results, significant pathways, and pathway scores  
+
+- **`runGSEA()`**  
+  - Runs GSEA using `clusterProfiler` on a ranked list (t-statistic)  
+  - Supports multiple MSigDB categories (Hallmark, KEGG, GO:BP, Reactome)
+
+- **`get_pathway_genes()`**  
+  - Extracts core enrichment genes from top significant pathways (by adjusted p-value)  
+
+- **`get_pathway_genes_all()`**  
+  - Aggregates pathway genes across all contrasts, ranking by minimum adjusted p-value  
+
+- **`get_significant_pathways()`**  
+  - Returns all pathways passing a specified FDR cutoff
+
+- **`calculate_pathway_scores()`**  
+  - For each pathway, selects its genes and averages their expression per sample  
+  - Outputs a “samples × pathways” score matrix
+
+---
+
+## 🧩 Key Functions Explained
+
+| Function                          | Description                                                                      |
+|----------------------------------|----------------------------------------------------------------------------------|
+| **`runGSEA()`**                  | Runs GSEA using a ranked gene list (e.g., t-statistics) and MSigDB categories.   |
+| **`run_pooled_gsea()`**          | Applies `runGSEA()` to multiple contrasts and compiles pooled results.           |
+| **`get_pathway_genes()`**        | Retrieves top significant pathways and their core enrichment genes.              |
+| **`calculate_pathway_scores()`** | Computes average expression of pathway genes per sample.                         |
+| **`create_volcano_plot()`**      | Generates volcano plots with labeling and threshold options.                     |
+| **`plot_pathway_heatmap()`**     | Plots expression heatmaps with metadata annotations.                             |
+| **`create_combined_volcano_plots()`** | Merges multiple volcano plots into a single visualization.               |
+
+---
+
+## 🖼️ Output Files
+
+All plots and tables are saved under:
+
+```
+3_Results/
+  ├── DE_tables/                   # Differential expression results
+  ├── imgs/
+      ├── GSEA/
+          ├── A.Pair-wise comparisons/  # Heatmaps from pooled GSEA
+          ├── B.Granular_questions/     # Dotplots, heatmaps, and GSEA enrichment plots for specific contrasts
+```
+
+---
