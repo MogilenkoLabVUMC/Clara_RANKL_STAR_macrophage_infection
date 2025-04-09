@@ -448,7 +448,14 @@ plot_pathway_heatmap(reactome_scores, "REACTOME Pathways", annotation_col)
 dev.off()
 
 
-## tease apart which pathways RANKL is downregulating (or upregulating) in STm infected cells? i.e. RANKL effect on infection, 4h or 24h individually  
+#---------------------#---------------------#---------------------#-------------
+# Follow-up analysis №1
+### 5. Which pathways RANKL is (up or) downregulating in STm infected cells? 
+###  i.e. RANKL effect on infection, 4h or 24h individually  
+#---------------------#---------------------#---------------------#-------------
+
+source("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/1_Scripts/run_GSEA_analysis.R")
+
 
 # Define databases to analyze
 db_configs <- list(
@@ -458,67 +465,66 @@ db_configs <- list(
     GOBP = list(category = "C5", subcategory = "GO:BP")
 )
 
-# Function to run GSEA and create plots for one DE table
-run_gsea_analysis <- function(de_table, timepoint) {
-    # Define database-specific plot parameters
-    db_plot_params <- list(
-        HALLMARK = list(width = 10, height = 7, font.size = 10),
-        REACTOME = list(width = 20, height = 11, font.size = 8),
-        KEGG = list(width = 12, height = 8, font.size = 9),
-        GOBP = list(width = 13, height = 8, font.size = 9)
-    )
-    
-    for (db_name in names(db_configs)) {
-        # Get database-specific parameters
-        params <- db_plot_params[[db_name]]
-        
-        gsea_result <- runGSEA(
-            DE_results = de_table,
-            rank_metric = "t",
-            category = db_configs[[db_name]]$category,
-            subcategory = db_configs[[db_name]]$subcategory,
-            padj_method = "fdr",
-            nperm = 100000,
-            pvalue_cutoff = 0.05
-        )
-        
-        GSEA_dotplot(
-            gsea_result,
-            filterBy = "NES_positive",
-            sortBy = "GeneRatio",
-            font.size = params$font.size,
-            showCategory = 15,
-            q_cut = 0.05,
-            replace_ = TRUE,
-            capitalize_1 = FALSE,
-            capitalize_all = FALSE,
-            min.dotSize = 2,
-            title = paste0(timepoint, " ", db_name, " Upregulated")
-        )
-        
-        GSEA_dotplot(
-            gsea_result,
-            filterBy = "NES_negative",
-            sortBy = "GeneRatio",
-            font.size = params$font.size,
-            showCategory = 15,
-            q_cut = 0.05,
-            replace_ = TRUE,
-            capitalize_1 = FALSE,
-            capitalize_all = FALSE,
-            min.dotSize = 2,
-            title = paste0(timepoint, " ", db_name, " Downregulated")
-        )
-        
-        GSEA_barplot(
-            gsea_result,
-            title = paste0(timepoint, " ", db_name, " NES"),
-            width = params$width,
-            height = params$height
-        )
-    }
-}
+# Run analysis for both timepoints with custom output directory
+custom_output_dir <- "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/"
 
 # Run analysis for both timepoints
-run_gsea_analysis(DE_rankl_4h, "4h")
-run_gsea_analysis(DE_rankl_24h, "24h")
+res_4h <- run_gsea_analysis(DE_rankl_4h, "4h", output_dir = custom_output_dir)
+res_24h <- run_gsea_analysis(DE_rankl_24h, "24h", output_dir = custom_output_dir)
+
+str(res_4h)
+
+#---------------------#---------------------#---------------------#-------------
+# Follow-up analysis №2
+# - separate NES neg and pos plots 
+# - pathway gene heatmaps
+#---------------------#---------------------#---------------------#-------------
+
+source("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/1_Scripts/plot_single_pathway_heatmap.R", encoding = "UTF-8")
+
+# Assuming you already have:
+# gsea_result_4h_kegg (the GSEA object for 4h KEGG)
+# norm_counts (expression matrix)
+# sample_order (vector of sample names in correct order)
+# annotation_col, ann_colors
+
+# 1) 4h KEGG downregulated: TOLL LIKE RECEPTOR SIGNALING PATHWAY
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["KEGG"]],
+  pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+  expression_data = norm_counts,
+  sample_order = sample_order,
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_KEGG_downregulated"
+)
+
+# 2) 4h GO BP downregulated pathways
+# We might have gsea_result_4h_gobp = runGSEA(...) for 4h GO:BP
+for(path_name in c(
+  "GOBP_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+  "GOBP_CELLULAR_RESPONSE_TO_BIOTIC_STIMULUS",
+  "GOBP_CELLULAR_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN"
+)) {
+  plot_single_pathway_heatmap(
+    gsea_obj = res_4h[["GOBP"]],
+    pathway_name = path_name,
+    expression_data = norm_counts,
+    sample_order = sample_order,
+    annotation_col = annotation_col,
+    annotation_colors = ann_colors,
+    output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_GOBP_downregulated"
+  )
+}
+
+# 3) 4h GO BP upregulated: GOBP NEGATIVE REGULATION OF UBIQUITIN PROTEIN LIGASE ACTIVITY
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["GOBP"]],
+  pathway_name = "GOBP_NEGATIVE_REGULATION_OF_UBIQUITIN_PROTEIN_LIGASE_ACTIVITY",
+  expression_data = norm_counts,
+  sample_order = sample_order,
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_GOBP_upregulated"
+)
+

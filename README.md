@@ -242,6 +242,103 @@ Perform GSEA across multiple contrasts and **aggregate** significant pathways an
 
 ---
 
+## Follow-up №1: Potential caveats, adressing collaborator questions 
+
+Below is a suggested way to add a new section to your README addressing the **scientist’s questions** and how you responded by producing dedicated plots and analyses. Feel free to customize the language or level of detail to best fit your style.
+
+After reviewing initial results, our collaborator raised the following points:
+
+> 1. **Time-Dependent Changes**: Concern that serum starvation at 24h could confound interpretation of time effects.  
+> 2. **Gene Ratio Directionality**: Whether the gene ratio shown in dotplots is directional (up/down).  
+> 3. **Targeted Pathway Insights**: Desire to see which pathways RANKL specifically up- or down-regulates in *Salmonella*-infected cells at each timepoint (4h vs. 24h).
+
+#### Our Response
+
+1. **Time-Dependent (Batch) Effects**  
+   - Acknowledged potential batch/confounding issues (e.g., serum starvation).  
+   - Noted that we cannot fully correct for it in this dataset.  
+   - Emphasized cautious interpretation of 4h vs. 24h comparisons.
+
+2. **Gene Ratio & NES**  
+   - Clarified that **gene ratio** is non-directional—it’s the fraction of genes from a set that appear in the DE list.  
+   - **Normalized Enrichment Score (NES)**, in contrast, is directional and indicates whether a pathway is up- or down-regulated.
+
+3. **Pathways Specifically Up-/Down-Regulated by RANKL**  
+   - Implemented additional code to produce **separate dotplots** for up- and down-regulated pathways, based on the NES sign.  
+   - Created **barplots** of NES values to highlight which pathways RANKL is modulating.
+
+#### Code for Focused RANKL vs. Infection Pathway Analysis
+
+`run_gsea_analysis` is a code snippet that addresses these concerns. It creates separate **dotplots** and **barplots** to show which pathways are *upregulated* or *downregulated* by RANKL in *Salmonella*-infected cells, at both 4h and 24h. It uses the existing `runGSEA` infrastructure, filtering by **NES** sign and p-value thresholds.
+
+
+#### Interpretation
+
+- **Upregulated Pathways**: Appear in the “NES positive” dotplot. Higher NES values suggest a stronger positive effect of RANKL on that pathway under *Salmonella* infection at the specified timepoint.  
+- **Downregulated Pathways**: Appear in the “NES negative” dotplot. These are pathways suppressed by RANKL.  
+- **Barplots**: Provide a quick comparison of NES values for the top significant pathways, allowing you to see relative enrichment.
+
+This approach answers the request for clearer insights into **which pathways RANKL might up- or downregulate in infected cells** at each timepoint. 
+
+---
+
+## Follow-up №2: Additional plots per collaborators request
+
+Our collaborators requested deeper insight into the actual **genes** driving those pathway enrichments.
+
+* From the 4h KEGG downregulated pathways, “TOLL LIKE RECEPTOR SIGNALING PATHWAY”
+* From the 4h GO BP downregulated pathways:
+    * “GOBP RESPONSE TO MOLECULE OF BACTERIAL ORIGIN”, 
+    * “GOBP CELLULAR RESPONSE TO BIOTIC STIMULUS”, 
+    * “GOBP CELLULAR RESPONSE TO MOLECULE OF BACTERIAL ORIGIN”
+* From the 4h GO BP upregulated pathways:
+    * “GOBP NEGATIVE REGULATION OF UBIQUITIN PROTEIN LIGASE ACTIVITY”
+
+To get these heatmaps we\`ve developed **`plot_single_pathway_heatmap()`**, which: 
+- Identifies a **single** pathway from a GSEA result object (e.g., `gseaResult` from `clusterProfiler`).  
+- Extracts the **core enrichment genes** that contribute to that pathway’s enrichment.  
+- Subsets the **normalized expression matrix** (e.g., `log-CPM`) to those genes.  
+- Generates a **heatmap** of gene expression values across samples, with optional row/column annotations.
+
+### Function Arguments
+
+- **`gsea_obj`**: A single GSEA result object from `clusterProfiler` (class `gseaResult`).  
+- **`pathway_name`**: The name (or partial name) of the pathway in the GSEA table. The function searches both `Description` and `ID` fields.  
+- **`expression_data`**: A matrix (or data frame) of normalized gene expression values (`log-CPM`, `log2 TPM`, etc.). Rows = genes, columns = sample IDs.  
+- **`sample_order`**: A character vector specifying the order of the sample columns in the heatmap.  
+- **`annotation_col`** & **`annotation_colors`**: Optional metadata for sample annotation bars (e.g., timepoint, treatment).  
+- **`output_prefix`**: File path prefix for saving the PDF (e.g., `"4h_KEGG_downregulated"`).  
+- **`scale_expr`**: Scaling parameter passed to **pheatmap** (`"row"`, `"none"`, etc.).  
+
+```r
+# Suppose you have:
+# res_4h <- run_gsea_analysis(DE_rankl_4h, "4h")
+# res_4h$KEGG is the gseaResult object for KEGG at 4h
+# norm_counts is your normalized expression data
+# sample_order is a vector of sample IDs in the desired order
+
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["KEGG"]],
+  pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+  expression_data = norm_counts,
+  sample_order = sample_order,
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "4h_KEGG_TLR_Heatmap"
+)
+```
+
+This will create a heatmap PDF named something like **`4h_KEGG_TLR_Heatmap_KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY.pdf`** in your working directory, showing the core genes that contributed to that pathway’s enrichment at 4h.
+
+### Notes & Tips
+
+- **Pathway Matching**: If you see “No matching pathway found,” verify the exact string in either the `Description` or `ID` column of your GSEA results. Some might contain fewer underscores or different spellings.
+- **Font Sizing**: If the row or column labels are still crowded, reduce `fontsize_row` or `fontsize_col` further, or use `scale_expr = "none"` if row-scaling isn’t desired.
+- **Cluster Columns**: We disable column clustering (`cluster_cols = FALSE`) to preserve the sample order. If you prefer data-driven clustering for columns, change to `cluster_cols = TRUE`.
+- **File Naming**: The function automatically strips non-alphanumeric characters from the pathway name to avoid file system issues.
+
+---
+
 ## 🖼️ Output Files
 
 All plots and tables are saved under:
@@ -253,6 +350,11 @@ All plots and tables are saved under:
       ├── GSEA/
           ├── A.Pair-wise comparisons/  # Heatmaps from pooled GSEA
           ├── B.Granular_questions/     # Dotplots, heatmaps, and GSEA enrichment plots for specific contrasts
+          ├── C.4_24h_RANKL_separate/     # Separate GSEA plots for 4h and 24h, respectively 
+                ├── Pathways/     # Core genes heatmaps for pathways of interest 
 ```
 
 ---
+
+
+
