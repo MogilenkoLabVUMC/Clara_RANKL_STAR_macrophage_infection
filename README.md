@@ -115,8 +115,6 @@ Uses the same mathematical logic, just with 24h samples
 * Positive values indicate genes where RANKL's effect on infection response is stronger at 24h
 * Negative values indicate genes where RANKL's effect on infection response is stronger at 4h
 
-
-
 ---
 
 ## 🧰 Pipeline Overview
@@ -137,40 +135,18 @@ Scripts are modularized under `1_Scripts/`:
 
 ---
 
+### 3. **Differential Expression Analysis**
+- We defined various contrasts adressing specific questions (see Statistical Modelling explanation above)
+- Performed standard DE analysis using `edgeR::voomLmFit` with `sample.weights = TRUE`
+
+---
+
 ### 3. **Pooled GSEA Analysis**
 
-#### 🧮 Defining Contrasts
-```r
-### Pool contrast design
-contrasts.p <- makeContrasts(
-    # STm effect without RANKL at 4h
-    STm_4h_0 = t4h_STm_0 - t4h_mock_0,
-    # STm effect with RANKL at 4h
-    STm_4h_100 = t4h_STm_100 - t4h_mock_100,
-    # RANKL effect without infection at 4h
-    RANKL_4h_mock = t4h_mock_100 - t4h_mock_0,
-    # RANKL effect with infection at 4h
-    RANKL_4h_STm = t4h_STm_100 - t4h_STm_0,
-    # STm effect without RANKL at 24h
-    STm_24h_0 = t24h_STm_0 - t24h_mock_0,
-    # STm effect with RANKL at 24h
-    STm_24h_100 = t24h_STm_100 - t24h_mock_100,
-    # RANKL effect without infection at 24h
-    RANKL_24h_mock = t24h_mock_100 - t24h_mock_0,
-    # RANKL effect with infection at 24h
-    RANKL_24h_STm = t24h_STm_100 - t24h_STm_0,
-    # Design
-    levels = design
-)
+To inspect the changes across global pattern we performed pooled GSEA. The logic of the pooled GSEA analysis is described below.
 
-# Granular contrasts
-contrasts.m <- makeContrasts(
-    RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0),
-    RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0),
-    Time_RANKL_effect = ((t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)) - ((t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)),
-    levels = design
-)
-```
+
+
 ### 📈 Running Pooled GSEA
 
 ```r
