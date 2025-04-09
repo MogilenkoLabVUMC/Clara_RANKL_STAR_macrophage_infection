@@ -244,8 +244,6 @@ Perform GSEA across multiple contrasts and **aggregate** significant pathways an
 
 ## Follow-up №1: Potential caveats, adressing collaborator questions 
 
-Below is a suggested way to add a new section to your README addressing the **scientist’s questions** and how you responded by producing dedicated plots and analyses. Feel free to customize the language or level of detail to best fit your style.
-
 After reviewing initial results, our collaborator raised the following points:
 
 > 1. **Time-Dependent Changes**: Concern that serum starvation at 24h could confound interpretation of time effects.  
