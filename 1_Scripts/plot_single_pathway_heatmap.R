@@ -10,7 +10,8 @@ plot_single_pathway_heatmap <- function(
   annotation_col = NULL,
   annotation_colors = NULL,
   output_prefix = "pathway_heatmap",
-  scale_expr = "row"
+  scale_expr = "row",
+  gaps_col = NULL  # New parameter for column gaps, NULL means no gaps
 ) {
   # Convert GSEA results to a data frame
   gsea_df <- as.data.frame(gsea_obj@result)
@@ -51,8 +52,18 @@ plot_single_pathway_heatmap <- function(
   
   heatmap_title <- paste("Heatmap of", cleaned_pathway_name)
   
-  # Plot with pheatmap and smaller fonts
-  p <- pheatmap::pheatmap(
+  # Create output filename
+  out_filename <- paste0(
+    output_prefix, "_", 
+    gsub("[^A-Za-z0-9_]+", "_", pathway_info$Description),
+    ".pdf"
+  )
+  
+  # Use pdf() and dev.off() for consistent output
+  pdf(out_filename, width = 10, height = 8)
+  
+  # Create pheatmap parameters list
+  pheatmap_params <- list(
     mat = expr_sub,
     scale = scale_expr,
     cluster_rows = TRUE,
@@ -63,21 +74,20 @@ plot_single_pathway_heatmap <- function(
     annotation_colors = annotation_colors,
     color = colorRampPalette(c("navy", "white", "red"))(50),
     main = heatmap_title,
-    fontsize = 9,           # overall font size
-    fontsize_row = 7,       # row labels
-    fontsize_col = 7        # column labels
+    fontsize = 9,
+    fontsize_row = 7,
+    fontsize_col = 7
   )
   
-  # Save the plot
-  out_filename <- paste0(
-    output_prefix, "_", 
-    gsub("[^A-Za-z0-9_]+", "_", pathway_info$Description),  # a safe file name
-    ".pdf"
-  )
+  # Add gaps_col parameter only if it's not NULL
+  if (!is.null(gaps_col)) {
+    pheatmap_params$gaps_col <- gaps_col
+  }
   
-  ggsave(out_filename, plot = p[[4]], width = 10, height = 8)
-  # p[[4]] is the ggplot object for the heatmap in pheatmap 1.0+ 
-  # (versions may vary—if in doubt, wrap the entire pheatmap() call in a pdf()... dev.off() block)
+  # Plot with pheatmap
+  p <- do.call(pheatmap::pheatmap, pheatmap_params)
+  
+  dev.off()
   
   return(invisible(p))
 }
