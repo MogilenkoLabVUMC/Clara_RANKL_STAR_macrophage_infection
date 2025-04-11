@@ -29,7 +29,7 @@ sample_info$Sample <- rownames(sample_info)
 ## Create DGEList object with sample information
 DGErankl <- process_rnaseq_data(counts, sample_info)
 # Display sample information
-DT::datatable(DGErankl$samples)
+#DT::datatable(DGErankl$samples)
 
 # PCA
 create_pca_plot(DGErankl, title = "PCA Plot")
@@ -528,3 +528,158 @@ plot_single_pathway_heatmap(
   output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_GOBP_upregulated"
 )
 
+## Follow-up 3
+
+# ## TOLL LIKE RECEPTOR SIGNALING PATHWAY
+# # 1) 4h KEGG downregulated: TOLL LIKE RECEPTOR SIGNALING PATHWAY
+# plot_single_pathway_heatmap(
+#   gsea_obj = res_4h[["KEGG"]],
+#   pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+#   expression_data = norm_counts,
+#   sample_order = sample_order,
+#   annotation_col = annotation_col,
+#   annotation_colors = ann_colors,
+#   output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_TLR_downregulated"
+# )
+
+# # 2) 24h KEGG downregulated: TOLL LIKE RECEPTOR SIGNALING PATHWAY
+# plot_single_pathway_heatmap(
+#   gsea_obj = res_24h[["KEGG"]],
+#   pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+#   expression_data = norm_counts,
+#   sample_order = sample_order,
+#   annotation_col = annotation_col,
+#   annotation_colors = ann_colors,
+#   output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/24h_TLR_downregulated"
+# )
+
+# ## CELLULAR RESPONSE TO MOLECULE OF BACTERIAL ORIGIN
+# # 1) 4h GOBP downregulated: CELLULAR RESPONSE TO MOLECULE OF BACTERIAL ORIGIN
+# plot_single_pathway_heatmap(
+#   gsea_obj = res_4h[["GOBP"]],
+#   pathway_name = "GOBP_CELLULAR_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+#   expression_data = norm_counts,
+#   sample_order = sample_order,
+#   annotation_col = annotation_col,
+#   annotation_colors = ann_colors,
+#   output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_Bacterial_response_downregulated"
+# )
+
+# # 2) 24h GOBP downregulated: CELLULAR RESPONSE TO MOLECULE OF BACTERIAL ORIGIN
+# plot_single_pathway_heatmap(
+#   gsea_obj = res_24h[["GOBP"]],
+#   pathway_name = "GOBP_CELLULAR_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+#   expression_data = norm_counts,
+#   sample_order = sample_order,
+#   annotation_col = annotation_col,
+#   annotation_colors = ann_colors,
+#   output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/24h_Bacterial_response_downregulated"
+# )
+
+
+#### Separate the 4 and 24h column samples 
+
+# First, create a time-based sample order
+time_based_sample_order <- with(DGErankl$samples, {
+  # First get all 4h samples
+  time_4h_samples <- character()
+  for(r in c(0, 100)) {
+    for(tr in c("mock", "STm")) {
+      idx <- (rankl == r & treatment == tr & timepoint == 4)
+      these_cells <- rownames(DGErankl$samples)[idx]
+      time_4h_samples <- c(time_4h_samples, these_cells)
+    }
+  }
+  
+  # Then get all 24h samples
+  time_24h_samples <- character()
+  for(r in c(0, 100)) {
+    for(tr in c("mock", "STm")) {
+      idx <- (rankl == r & treatment == tr & timepoint == 24)
+      these_cells <- rownames(DGErankl$samples)[idx]
+      time_24h_samples <- c(time_24h_samples, these_cells)
+    }
+  }
+  
+  # Combine them
+  c(time_4h_samples, time_24h_samples)
+})
+
+
+# For TLR signaling pathway
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["KEGG"]],
+  pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+  expression_data = norm_counts,
+  sample_order = time_based_sample_order,
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/Combined_TLR",
+  gaps_col = 12
+)
+
+# For cellular response to bacterial origin
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["GOBP"]],
+  pathway_name = "GOBP_CELLULAR_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+  expression_data = norm_counts,
+  sample_order = time_based_sample_order,
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/Combined_Bacterial_response",
+  gaps_col = 12
+)
+
+
+
+### 4h and 24h separate 
+# Get 4h samples only
+samples_4h <- rownames(DGErankl$samples)[DGErankl$samples$timepoint == 4]
+
+# Get 24h samples only
+samples_24h <- rownames(DGErankl$samples)[DGErankl$samples$timepoint == 24]
+
+# Create 4h-only heatmap for TLR signaling
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["KEGG"]],
+  pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+  expression_data = norm_counts,
+  sample_order = samples_4h,  # Only 4h samples
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_only_TLR"
+)
+
+# Create 24h-only heatmap for TLR signaling
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["KEGG"]],
+  pathway_name = "KEGG_TOLL_LIKE_RECEPTOR_SIGNALING_PATHWAY",
+  expression_data = norm_counts,
+  sample_order = samples_24h,  # Only 24h samples
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/24h_only_TLR"
+)
+
+# Similarly for bacterial response pathway
+# 4h only
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["GOBP"]],
+  pathway_name = "GOBP_CELLULAR_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+  expression_data = norm_counts,
+  sample_order = samples_4h,  # Only 4h samples
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/4h_only_Bacterial_response"
+)
+
+# 24h only
+plot_single_pathway_heatmap(
+  gsea_obj = res_4h[["GOBP"]],
+  pathway_name = "GOBP_CELLULAR_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+  expression_data = norm_counts,
+  sample_order = samples_24h,  # Only 24h samples
+  annotation_col = annotation_col,
+  annotation_colors = ann_colors,
+  output_prefix = "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/Pathways/24h_only_Bacterial_response"
+)
