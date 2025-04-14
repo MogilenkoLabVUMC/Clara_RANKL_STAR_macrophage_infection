@@ -313,6 +313,46 @@ This will create a heatmap PDF named something like **`4h_KEGG_TLR_Heatmap_KEGG_
 
 ---
 
+### Follow-up response to Clara
+
+What concerns the differential expression and these plots – I thought it might be helpful to walk you through the analysis in two parts:
+**Part 1: Differential Expression and GSEA**
+We performed DE analysis separately for 4h and 24h using the contrasts:
+
+* 4h:
+```
+RANKL_effect_4h = (t4h_STm_100 - t4h_mock_100) - (t4h_STm_0 - t4h_mock_0)
+```
+
+* 24h:
+```
+RANKL_effect_24h = (t24h_STm_100 - t24h_mock_100) - (t24h_STm_0 - t24h_mock_0)
+```
+
+From each contrast, we obtained a ranked list of differentially expressed genes (DEGs), which we then used as input for GSEA—run separately for 4h and 24h.
+The output from GSEA (e.g., bubble plots and NES bar plots) tells us which pathways are enriched or downregulated in response to RANKL under infection, compared to baseline. This gives a more global view, showing if a particular pathway is at all enriched at the timepoint. 
+This part of the analysis gives us bubble plots and the NES barplots. You should check those, if you`re interested if the pathway was enriched at some particular timepoint. 
+
+**Part 2: Heatmaps and Expression Patterns**
+Once enriched pathways are identified, the next question becomes: how do these pathways actually behave across conditions and timepoints?
+To answer that, we generate heatmaps showing expression of genes in those pathways. There are two types of heatmaps we use:
+
+**1. Pathway-level Heatmaps (Average Expression):**
+For a selected pathway, we take the core gene set (i.e., the most contributing genes from GSEA), extract their normalized expression values (e.g., log-transformed read counts) per sample, and compute the mean expression across all genes in that set. This gives us a single average expression value per sample for the pathway.
+
+**2. Gene-level Heatmaps:**
+Here, instead of summarizing the entire pathway into one number, we display the normalized expression for each gene in the pathway across all samples. This allows us to visualize individual gene behavior within the pathway.
+In both cases, we then standardize the expression values using z-scores. This means each gene’s expression is scaled relative to its own mean and variability across the selected samples.
+In combined 4h+24h heatmaps, z-scoring is done across all samples (4h and 24h), so color patterns reflect differences across timepoints.
+In separate 4h and 24h heatmaps, z-scoring is done within each timepoint, helping reveal timepoint-specific expression patterns that may otherwise be masked.
+To summarize:
+
+GSEA uses differential expression stats to show which pathways are enriched.
+Pathway heatmaps show the average normalized expression (log2-counts) across genes in a pathway.
+Gene-level heatmaps show the expression (log2 counts) of individual genes within that pathway.
+
+This basically means even if a pathway like TLR signaling isn't significantly enriched at 24h, we can still visualize its gene expression to explore biological relevance beyond strict significance thresholds. TLR and Bacterial response pathway are not significantly enriched at 24h timepoint, yet we still can visualise their expression levels just by looking at the same genes expression levels.
+
 ## 🖼️ Output Files
 
 All plots and tables are saved under:
