@@ -456,23 +456,45 @@ dev.off()
 
 source("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/1_Scripts/run_GSEA_analysis.R")
 
-
-# Define databases to analyze
+# Define databases to analyze using the new collection/subcollection syntax
 db_configs <- list(
     HALLMARK = list(category = "H", subcategory = NULL),
     REACTOME = list(category = "C2", subcategory = "CP:REACTOME"),
-    KEGG = list(category = "C2", subcategory = "CP:KEGG"),
-    GOBP = list(category = "C5", subcategory = "GO:BP")
+    KEGG = list(category = "C2", subcategory = "CP:KEGG_LEGACY"),
+    GOBP = list(category = "C5", subcategory = "GO:BP"),
+    GOCC = list(category = "C5", subcategory = "GO:CC"),
+    GOMF = list(category = "C5", subcategory = "GO:MF"),
+    PID = list(category = "C2", subcategory = "CP:PID"),
+    TFT = list(category = "C3", subcategory = "TFT:GTRD"),
+    GRTD = list(category = "C3", subcategory = "GRTD"),
+    GRTD = list(category = "M3", subcategory = "GRTD"),
+    CGP = list(category = "M2", subcategory = "CGP"),
+    BIOCARTA = list(category = "M2", subcategory = "CP:BIOCARTA"),
+    WIKIPATHWAY = list(category = "M2", subcategory = "CP:WIKIPATHWAYS")
 )
 
 # Run analysis for both timepoints with custom output directory
 custom_output_dir <- "/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/3_Results/imgs/GSEA/C.4_24h_RANKL_separate/"
 
 # Run analysis for both timepoints
-res_4h <- run_gsea_analysis(DE_rankl_4h, "4h", output_dir = custom_output_dir)
-res_24h <- run_gsea_analysis(DE_rankl_24h, "24h", output_dir = custom_output_dir)
+res_4h <- run_gsea_analysis(
+  de_table = DE_rankl_4h, 
+  n_cat = 20,
+  timepoint = "4h", 
+  species = "Mus musculus",
+  output_dir = custom_output_dir)
 
+res_24h <- run_gsea_analysis(
+  de_table = DE_rankl_24h, 
+  timepoint = "24h", 
+  species = "Mus musculus",
+  output_dir = custom_output_dir)
+
+# Examine the results
 str(res_4h)
+str(res_24h)
+
+
 
 #---------------------#---------------------#---------------------#-------------
 # Follow-up analysis №2

@@ -21,8 +21,8 @@ runGSEA <- function(DE_results,
   
   # Get gene sets from MSigDB
   msigdb_H <- msigdbr(species = species, 
-                      category = category,
-                      subcategory = subcategory)
+                      collection = category,
+                      subcollection = subcategory)
   
   # Perform GSEA
   GSEA_result <- GSEA(ranked_genes, 

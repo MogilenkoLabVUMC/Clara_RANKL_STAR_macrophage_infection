@@ -21,6 +21,7 @@ smart_wrap <- function(text, width = 40) {
 }
 GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "GSEA Dotplot",
                          replace_ = TRUE, capitalize_1 = TRUE, capitalize_all = FALSE,
+                         strip_prefix = TRUE,
                          filterBy = "qvalue",
                          sortBy = "GeneRatio",
                          q_cut = 0.05,
@@ -45,6 +46,19 @@ GSEA_dotplot <- function(gsea_obj, showCategory = 10, font.size = 10, title = "G
         gsea_data$Description <- gsea_data$Description %>%
             str_replace_all("_", " ") # Replace "_" with " " if 'replace' is TRUE
     }
+    
+        # Strip common prefixes if requested - BEFORE capitalization
+    if (strip_prefix) {
+        common_prefixes <- c(
+            "HALLMARK ", "KEGG ", "REACTOME ", "BIOCARTA ", "GOBP ", "GOCC ", "GOMF ", "MEDICUS ", "GRTD",
+            "PID ", "WIKIPATHWAY ", "GO "
+        )
+        
+        # Create a pattern for all prefixes at once for more efficient replacement
+        prefix_pattern <- paste0("^(", paste(common_prefixes, collapse = "|"), ")")
+        gsea_data$Description <- str_replace(gsea_data$Description, prefix_pattern, "")
+    }
+    
     if (capitalize_1) {
         gsea_data$Description <- gsea_data$Description %>%
             str_to_sentence() # Capitalize only the first word if 'capitalize_1' is TRUE
