@@ -499,7 +499,6 @@ res_24h <- run_gsea_analysis(
 
 source("/Users/tony/My Drive (anton.bioinf.md@gmail.com)/Data_Analysis/ClaraRANKL_STAR/1_Scripts/plot_single_pathway_heatmap.R", encoding = "UTF-8")
 
-# Assuming you already have:
 # gsea_result_4h_kegg (the GSEA object for 4h KEGG)
 # norm_counts (expression matrix)
 # sample_order (vector of sample names in correct order)
