@@ -464,7 +464,7 @@ db_configs <- list(
     GOBP = list(category = "C5", subcategory = "GO:BP"),
     GOCC = list(category = "C5", subcategory = "GO:CC"),
     GOMF = list(category = "C5", subcategory = "GO:MF"),
-    PID = list(category = "C2", subcategory = "CP:PID"),
+    #PID = list(category = "C2", subcategory = "CP:PID"),
     TFT = list(category = "C3", subcategory = "TFT:GTRD"),
     GRTD = list(category = "C3", subcategory = "GRTD"),
     GRTD = list(category = "M3", subcategory = "GRTD"),
@@ -489,11 +489,6 @@ res_24h <- run_gsea_analysis(
   timepoint = "24h", 
   species = "Mus musculus",
   output_dir = custom_output_dir)
-
-# Examine the results
-str(res_4h)
-str(res_24h)
-
 
 
 #---------------------#---------------------#---------------------#-------------
