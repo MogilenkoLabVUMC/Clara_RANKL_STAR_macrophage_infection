@@ -58,7 +58,7 @@ To model the experiment in mathematical terms, two sets of contrasts are used::
 
 #### 🧮 Defining Contrasts
 
-1) Pool contrasts (effects within each timepoint/treatment combination)
+1) **Pool** contrasts (effects within each timepoint/treatment combination)
 
 ```r
 contrasts.p <- makeContrasts(
@@ -75,7 +75,7 @@ contrasts.p <- makeContrasts(
 ```
 These contrasts look at **baseline** RANKL and infection effects for each timepoint.
 
-2) Granular “modulation” contrasts (RANKL’s effect on infection at a timepoint and its time‑dependence)
+2) **Granular** “modulation” contrasts (RANKL’s effect on infection at a timepoint and its time‑dependence)
 
 ```r
 contrasts.m <- makeContrasts(
@@ -269,13 +269,13 @@ Perform GSEA across multiple contrasts and **aggregate** significant pathways an
 
 We deploy two complementary GSEA tracks:
 
-- Pooled GSEA (broad landscape): run GSEA for every contrast in `contrasts.p` across multiple databases; pool significant pathways across contrasts; extract core genes per pooled pathway; compute pathway scores (per sample) as average expression of core genes. This yields compact heatmaps capturing recurring pathway programs.
+- **Pooled GSEA** (broad landscape): run GSEA for every contrast in `contrasts.p` across multiple databases; pool significant pathways across contrasts; extract core genes per pooled pathway; compute pathway scores (per sample) as average expression of core genes. This yields compact heatmaps capturing recurring pathway programs.
 
-- Granular GSEA (focused questions): for targeted contrasts (`RANKL_effect_4h`, `RANKL_effect_24h`, `Time_RANKL_effect`), rank by moderated t, run GSEA per database, and visualize directionality (NES sign), magnitude (NES), significance (q‑value), and gene coverage (GeneRatio).
+- **Granular GSEA** (focused questions): for targeted contrasts (`RANKL_effect_4h`, `RANKL_effect_24h`, `Time_RANKL_effect`), rank by moderated t, run GSEA per database, and visualize directionality (NES sign), magnitude (NES), significance (q‑value), and gene coverage (GeneRatio).
 
-Why pool?
+**Why pool?**
 
-- Pooling stabilizes pathway selection against single‑contrast idiosyncrasies, highlighting pathways that recur or show strong evidence in at least one contrast. It supports downstream summarization (pathway scores) and interpretable heatmaps spanning all samples.
+- Pooling stabilizes pathway selection against single‑contrast findings, highlighting pathways that recur or show strong evidence in at least one contrast. It supports downstream summarization (pathway scores) and interpretable heatmaps spanning all samples.
 
 ---
 
@@ -380,32 +380,28 @@ Parameterization (as called from `2_Analysis/Analysis.R`):
 
 ---
 
+# Follow-up analyses
+
 ## Follow-up №1: Potential caveats, adressing collaborator questions 
 
 After reviewing initial results, our collaborator raised the following points:
 
-> 1. **Time-Dependent Changes**: Concern that serum starvation at 24h could confound interpretation of time effects.  
-> 2. **Gene Ratio Directionality**: Whether the gene ratio shown in dotplots is directional (up/down).  
-> 3. **Targeted Pathway Insights**: Desire to see which pathways RANKL specifically up- or down-regulates in *Salmonella*-infected cells at each timepoint (4h vs. 24h).
+> 1. **Time-Dependent Changes Confounding**: Our collaborator expressed concern that serum starvation at 24h could confound interpretation of time effects.  
+> 2. **Targeted Pathway Insights**: Desire to see which pathways RANKL specifically up- or down-regulates in *Salmonella*-infected cells at each timepoint (4h vs. 24h).
 
 #### Our Response
-
 1. **Time-Dependent (Batch) Effects**  
    - Acknowledged potential batch/confounding issues (e.g., serum starvation).  
-   - Noted that we cannot fully correct for it in this dataset.  
+   - Given the experimental design, we cannot fully correct for it in this dataset.  
    - Emphasized cautious interpretation of 4h vs. 24h comparisons.
 
-2. **Gene Ratio & NES**  
-   - Clarified that **gene ratio** is non-directional—it’s the fraction of genes from a set that appear in the DE list.  
-   - **Normalized Enrichment Score (NES)**, in contrast, is directional and indicates whether a pathway is up- or down-regulated.
-
-3. **Pathways Specifically Up-/Down-Regulated by RANKL**  
+2. **Pathways Specifically Up-/Down-Regulated by RANKL**  
    - Implemented additional code to produce **separate dotplots** for up- and down-regulated pathways, based on the NES sign.  
    - Created **barplots** of NES values to highlight which pathways RANKL is modulating.
 
 #### Code for Focused RANKL vs. Infection Pathway Analysis
 
-`run_gsea_analysis` is a code snippet that addresses these concerns. It creates separate **dotplots** and **barplots** to show which pathways are *upregulated* or *downregulated* by RANKL in *Salmonella*-infected cells, at both 4h and 24h. It uses the existing `runGSEA` infrastructure, filtering by **NES** sign and p-value thresholds.
+`run_gsea_analysis` is a code snippet that addresses these concerns. It creates separate **dotplots** and **barplots** to show which pathways are *upregulated* or *downregulated* by RANKL in *Salmonella*-infected cells, separate at both 4h and 24h. It uses the existing `runGSEA` infrastructure, filtering by **NES** sign and p-value thresholds.
 
 
 #### Interpretation
@@ -470,14 +466,15 @@ This will create a heatmap PDF named something like **`4h_KEGG_TLR_Heatmap_KEGG_
 
 - **Pathway Matching**: If you see “No matching pathway found,” verify the exact string in either the `Description` or `ID` column of your GSEA results. Some might contain fewer underscores or different spellings.
 - **Font Sizing**: If the row or column labels are still crowded, reduce `fontsize_row` or `fontsize_col` further, or use `scale_expr = "none"` if row-scaling isn’t desired.
-- **Cluster Columns**: We disable column clustering (`cluster_cols = FALSE`) to preserve the sample order. If you prefer data-driven clustering for columns, change to `cluster_cols = TRUE`.
+- **Cluster Columns**: We disable column clustering (`cluster_cols = FALSE`) to preserve the sample order. For data-driven clustering of columns change `cluster_cols = TRUE`.
 - **File Naming**: The function automatically strips non-alphanumeric characters from the pathway name to avoid file system issues.
 
 ---
 
-### Follow-up response to Clara
+### General Intuition of the analysis
 
-What concerns the differential expression and these plots – I thought it might be helpful to walk you through the analysis in two parts:
+In discussions with our lab members and our collaborator, I decided to provide this explanation into the general intuition of what we did. I decided to leave here for the record for the time being. 
+
 **Part 1: Differential Expression and GSEA**
 We performed DE analysis separately for 4h and 24h using the contrasts:
 
@@ -496,18 +493,19 @@ The output from GSEA (e.g., bubble plots and NES bar plots) tells us which pathw
 This part of the analysis gives us bubble plots and the NES barplots. You should check those, if you`re interested if the pathway was enriched at some particular timepoint. 
 
 **Part 2: Heatmaps and Expression Patterns**
-Once enriched pathways are identified, the next question becomes: how do these pathways actually behave across conditions and timepoints?
+Once enriched pathways are identified, the next question becomes: how do these pathways actually "behave" across conditions and timepoints?
 To answer that, we generate heatmaps showing expression of genes in those pathways. There are two types of heatmaps we use:
 
 **1. Pathway-level Heatmaps (Average Expression):**
 For a selected pathway, we take the core gene set (i.e., the most contributing genes from GSEA), extract their normalized expression values (e.g., log-transformed read counts) per sample, and compute the mean expression across all genes in that set. This gives us a single average expression value per sample for the pathway.
 
 **2. Gene-level Heatmaps:**
-Here, instead of summarizing the entire pathway into one number, we display the normalized expression for each gene in the pathway across all samples. This allows us to visualize individual gene behavior within the pathway.
+Here, instead of summarizing the entire pathway into one number, we display the normalized expression for each gene in the pathway across all samples. This allows us to visualize individual gene "behavior" within the pathway.
 In both cases, we then standardize the expression values using z-scores. This means each gene’s expression is scaled relative to its own mean and variability across the selected samples.
 In combined 4h+24h heatmaps, z-scoring is done across all samples (4h and 24h), so color patterns reflect differences across timepoints.
-In separate 4h and 24h heatmaps, z-scoring is done within each timepoint, helping reveal timepoint-specific expression patterns that may otherwise be masked.
-To summarize:
+In separate 4h and 24h heatmaps, z-scoring is done within each timepoint, which supposedly should help reveal timepoint-specific expression patterns that may otherwise be masked.
+
+**To summarize:**
 
 GSEA uses differential expression stats to show which pathways are enriched.
 Pathway heatmaps show the average normalized expression (log2-counts) across genes in a pathway.
