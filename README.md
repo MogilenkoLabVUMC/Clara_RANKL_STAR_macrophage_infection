@@ -443,10 +443,10 @@ To get these heatmaps we\`ve developed **`plot_single_pathway_heatmap()`**, whic
 - **`scale_expr`**: Scaling parameter passed to **pheatmap** (`"row"`, `"none"`, etc.).  
 
 ```r
-# Suppose you have:
+# Suppose we have:
 # res_4h <- run_gsea_analysis(DE_rankl_4h, "4h")
 # res_4h$KEGG is the gseaResult object for KEGG at 4h
-# norm_counts is your normalized expression data
+# norm_counts is our normalized expression data
 # sample_order is a vector of sample IDs in the desired order
 
 plot_single_pathway_heatmap(
@@ -473,7 +473,7 @@ This will create a heatmap PDF named something like **`4h_KEGG_TLR_Heatmap_KEGG_
 
 ### General Intuition of the analysis
 
-In discussions with our lab members and our collaborator, I decided to provide this explanation into the general intuition of what we did. I decided to leave here for the record for the time being. 
+In discussions with our lab members and our collaborator, I decided to provide this explanation into the general intuition of what we did. I decided to leave here it for the record and for the time being. 
 
 **Part 1: Differential Expression and GSEA**
 We performed DE analysis separately for 4h and 24h using the contrasts:
