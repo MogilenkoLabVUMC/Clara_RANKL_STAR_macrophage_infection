@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it using the
+  preferred citation below. A stable DOI will be added after the
+  Zenodo record is published.
+type: software
+title: >-
+  Code and RNA-seq analysis for “RANKL impairs Toll-like receptor signaling
+  via regulation of TRAM and TIRAP”
+version: 1.0.0
+date-released: 2025-11-15
+authors:
+  - given-names: Anton R.
+    family-names: Zhelonkin
+abstract: >-
+  This repository contains the bulk RNA-seq analysis pipeline used to study
+  how RANKL modulates macrophage responses to Salmonella Typhimurium infection
+  at 4 h and 24 h. Two families of contrasts are used:
+  (i) granular “modulation” contrasts isolating RANKL’s effect on the infection
+  response at each timepoint and its time-dependence; and (ii) within-timepoint
+  pairwise (“pool”) contrasts. Gene set enrichment analysis is run with
+  clusterProfiler (fgsea backend) using MSigDB (Hallmark, KEGG, Reactome, GO),
+  and pooled pathway scoring is computed from core enrichment genes. Scripts
+  generate PCA, volcano plots, GSEA dotplots/barplots, and pathway heatmaps.
+repository-code: https://github.com/MogilenkoLabVUMC/Clara_RANKL_STAR_macrophage_infection/tree/v1.0.0-zenodo
+keywords:
+  - RANKL
+  - Toll-like receptor
+  - TRAM
+  - TIRAP
+  - macrophage
+  - RNA-seq
+  - edgeR
+  - limma-voom
+  - clusterProfiler
+  - fgsea
+  - msigdbr
+  - STAR
+  - featureCounts
+preferred-citation:
+  type: software
+  title: >-
+    Code and RNA-seq analysis for “RANKL impairs Toll-like receptor signaling
+    via regulation of TRAM and TIRAP”
+  authors:
+    - given-names: Anton R.
+      family-names: Zhelonkin
+    - given-names: Denis A. 
+      family-names: Mogilenko
+  version: 1.0.0
+  date-released: 2025-11-15
+  doi: 10.5281/zenodo.17613762
+  url: https://github.com/MogilenkoLabVUMC/Clara_RANKL_STAR_macrophage_infection/tree/v1.0.0-zenodo
